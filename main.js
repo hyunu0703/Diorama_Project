@@ -62,7 +62,15 @@ scene.add(chassis);
 const metal = new THREE.MeshStandardMaterial({color:0x68727e,metalness:.85,roughness:.23});
 const panel = new THREE.MeshStandardMaterial({color:0xd4d7d9,metalness:.55,roughness:.38,side:THREE.DoubleSide});
 const dark = new THREE.MeshStandardMaterial({color:0x262a2e,metalness:.45,roughness:.45});
-const glass = new THREE.MeshPhysicalMaterial({color:0xffffff,metalness:0,roughness:.015,transmission:1,thickness:.012,ior:1.45,transparent:true,opacity:.16,side:THREE.DoubleSide,envMapIntensity:.2,depthWrite:false});
+// Clear dielectric glass: full optical transmission, no alpha haze or tint.
+// Single surfaces avoid overlapping front/back reflections from thin boxes.
+const glass = new THREE.MeshPhysicalMaterial({
+  color:0xffffff, metalness:0, roughness:0, transmission:1,
+  thickness:.004, ior:1.5, attenuationColor:0xffffff,
+  attenuationDistance:Infinity, opacity:1, transparent:false,
+  side:THREE.FrontSide, envMapIntensity:.08,
+  specularIntensity:.15, clearcoat:0
+});
 function caseBox(w,h,d,x,y,z,material=metal){
   const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
   mesh.position.set(x,y,z);chassis.add(mesh);return mesh;
@@ -77,11 +85,15 @@ for(const y of [-H/2+.08,H/2]){
   for(const x of [-W/2,W/2])caseBox(.075,.085,D,x,y,0);
 }
 for(const [x,z] of [[-W/2,-D/2],[-W/2,D/2],[W/2,D/2]])caseBox(.075,H,.075,x,0,z);
-caseBox(.025,H-.16,D-.12,W/2,0,0,glass);
-caseBox(W-.1,H-.16,.025,0,0,-D/2,glass);
-caseBox(W-.1,.025,D-.12,0,H/2,0,glass);
+function glassPane(width,height,x,y,z,rx,ry){
+ const pane=new THREE.Mesh(new THREE.PlaneGeometry(width,height),glass);
+ pane.position.set(x,y,z);pane.rotation.set(rx,ry,0);chassis.add(pane);
+}
+glassPane(D-.12,H-.16,W/2,0,0,0,Math.PI/2);
+glassPane(W-.1,H-.16,0,0,-D/2,0,Math.PI);
+glassPane(W-.1,D-.12,0,H/2,0,-Math.PI/2,0);
 // Soft blue-gray glass edges make all three transparent panes legible.
-const edgeMaterial=new THREE.LineBasicMaterial({color:0x9caeb3,transparent:true,opacity:.38});
+const edgeMaterial=new THREE.LineBasicMaterial({color:0xc7dedb,transparent:true,opacity:.16});
 for(const [w,h,d,x,y,z] of [[.025,H-.16,D-.12,W/2,0,0],[W-.1,H-.16,.025,0,0,-D/2],[W-.1,.025,D-.12,0,H/2,0]]){
  const geometry=new THREE.BoxGeometry(w,h,d);
  const edge=new THREE.LineSegments(new THREE.EdgesGeometry(geometry),edgeMaterial);
