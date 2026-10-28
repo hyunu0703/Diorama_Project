@@ -23,6 +23,9 @@ let drag = null;
 const canvas = renderer.domElement;
 const ray = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
+const target = new THREE.Vector3();
+const cameraRight = new THREE.Vector3();
+const cameraUp = new THREE.Vector3();
 
 function updateCamera() {
   camera.position.set(
@@ -30,24 +33,37 @@ function updateCamera() {
     Math.sin(elevation) * distance,
     Math.cos(angle) * Math.cos(elevation) * distance
   );
-  camera.lookAt(0, 0, 0);
+  camera.position.add(target);
+  camera.lookAt(target);
   camera.updateMatrixWorld();
 }
 updateCamera();
 canvas.addEventListener('pointerdown', event => {
-  if (event.button !== 0 || drag) return;
+  if ((event.button !== 0 && event.button !== 2) || drag) return;
   const rect = canvas.getBoundingClientRect();
   pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
   ray.setFromCamera(pointer, camera);
   if (ray.intersectObject(cube).length) return;
-  drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
+  event.preventDefault();
+  drag = { id: event.pointerId, mode: event.button === 2 ? 'pan' : 'rotate', x: event.clientX, y: event.clientY };
   canvas.setPointerCapture(event.pointerId);
   canvas.classList.add('dragging');
 });
 canvas.addEventListener('pointermove', event => {
   if (!drag || event.pointerId !== drag.id) return;
-  angle -= (event.clientX - drag.x) * 0.006;
-  elevation = THREE.MathUtils.clamp(elevation + (event.clientY - drag.y) * 0.004, -1.3, 1.3);
+  const dx = event.clientX - drag.x;
+  const dy = event.clientY - drag.y;
+  if (drag.mode === 'pan') {
+    // Match pointer movement in screen space at the current zoom level.
+    const unitsPerPixel = 2 * distance * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / canvas.clientHeight;
+    cameraRight.setFromMatrixColumn(camera.matrixWorld, 0);
+    cameraUp.setFromMatrixColumn(camera.matrixWorld, 1);
+    target.addScaledVector(cameraRight, -dx * unitsPerPixel);
+    target.addScaledVector(cameraUp, dy * unitsPerPixel);
+  } else {
+    angle -= dx * 0.006;
+    elevation = THREE.MathUtils.clamp(elevation + dy * 0.004, -1.3, 1.3);
+  }
   drag.x = event.clientX;
   drag.y = event.clientY;
 });
@@ -60,6 +76,7 @@ function stopDrag(event) {
 canvas.addEventListener('pointerup', stopDrag);
 canvas.addEventListener('pointercancel', stopDrag);
 canvas.addEventListener('lostpointercapture', stopDrag);
+canvas.addEventListener('contextmenu', event => event.preventDefault());
 canvas.addEventListener('wheel', event => {
   event.preventDefault();
   const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1);
