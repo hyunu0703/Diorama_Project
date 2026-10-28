@@ -56,15 +56,62 @@ pmrem.dispose();
 resources.forEach(resource => resource.dispose());
 room.clear();
 
-let angle = 0, elevation = .03, zoom = 55, targetZoom = 55, drag = null;
-let panX = 0, panY = 0;
+// Empty panoramic chassis: only shell, glass, fasteners and feet. No components.
+const chassis = new THREE.Group();
+scene.add(chassis);
+const metal = new THREE.MeshStandardMaterial({color:0xbfc3c6,metalness:.8,roughness:.28});
+const panel = new THREE.MeshStandardMaterial({color:0xd4d7d9,metalness:.55,roughness:.38,side:THREE.DoubleSide});
+const dark = new THREE.MeshStandardMaterial({color:0x262a2e,metalness:.45,roughness:.45});
+const glass = new THREE.MeshPhysicalMaterial({color:0xf1fcff,metalness:0,roughness:.045,transmission:.96,thickness:.035,ior:1.46,transparent:true,opacity:1,side:THREE.DoubleSide,envMapIntensity:.7,depthWrite:false});
+function caseBox(w,h,d,x,y,z,material=metal){
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
+  mesh.position.set(x,y,z);chassis.add(mesh);return mesh;
+}
+const W=2.6,H=4.2,D=3.6;
+caseBox(W,.14,D,0,-H/2,0,panel);
+caseBox(.08,H,D,-W/2,0,0,panel);
+caseBox(W,H,.08,0,0,-D/2,panel);
+// Thin perimeter rails leave the meeting corner of the front and side glass open.
+for(const y of [-H/2+.08,H/2]){
+  for(const z of [-D/2,D/2])caseBox(W,.085,.075,0,y,z);
+  for(const x of [-W/2,W/2])caseBox(.075,.085,D,x,y,0);
+}
+for(const [x,z] of [[-W/2,-D/2],[-W/2,D/2],[W/2,-D/2]])caseBox(.075,H,.075,x,0,z);
+caseBox(.025,H-.16,D-.12,W/2,0,0,glass);
+caseBox(W-.1,H-.16,.025,0,0,D/2,glass);
+caseBox(W-.1,.025,D-.12,0,H/2,0,glass);
+// Soft blue-gray glass edges make all three transparent panes legible.
+const edgeMaterial=new THREE.LineBasicMaterial({color:0x9caeb3,transparent:true,opacity:.38});
+for(const [w,h,d,x,y,z] of [[.025,H-.16,D-.12,W/2,0,0],[W-.1,H-.16,.025,0,0,D/2],[W-.1,.025,D-.12,0,H/2,0]]){
+ const geometry=new THREE.BoxGeometry(w,h,d);
+ const edge=new THREE.LineSegments(new THREE.EdgesGeometry(geometry),edgeMaterial);
+ edge.position.set(x,y,z);chassis.add(edge);geometry.dispose();
+}
+for(const x of [-1.03,1.03])for(const z of [-1.46,1.46]){
+ caseBox(.32,.18,.44,x,-H/2-.16,z,dark);
+ caseBox(.32,.035,.44,x,-H/2-.065,z,metal);
+}
+// Exterior panel screws, not interior hardware.
+for(const y of [-1.91,1.91])for(const x of [-1.15,1.15]){
+ const screw=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.018,16),dark);
+ screw.rotation.x=Math.PI/2;screw.position.set(x,y,D/2+.045);chassis.add(screw);
+}
+const power=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.012,24),dark);
+power.rotation.x=Math.PI/2;power.position.set(-.96,-1.94,D/2+.045);chassis.add(power);
+scene.add(new THREE.HemisphereLight(0xffffff,0x858a91,2));
+const keyLight=new THREE.DirectionalLight(0xffffff,3.5);keyLight.position.set(4,7,5);scene.add(keyLight);
+const rimLight=new THREE.DirectionalLight(0xdbeaff,2);rimLight.position.set(-4,3,-3);scene.add(rimLight);
+
+let angle = .82, elevation = .26, distance = 10.5, targetDistance = 10.5, drag = null;
+const target=new THREE.Vector3();
+const cameraRight=new THREE.Vector3(),cameraUp=new THREE.Vector3();
 const canvas = renderer.domElement;
 function updateCamera() {
-  // The viewpoint stays inside an infinite environment; no model edges can appear.
-  camera.position.set(0, 0, 0);
-  camera.lookAt(Math.sin(angle + panX) * Math.cos(elevation + panY), Math.sin(elevation + panY), -Math.cos(angle + panX) * Math.cos(elevation + panY));
-  camera.fov = zoom;
+  camera.position.set(Math.sin(angle)*Math.cos(elevation)*distance,Math.sin(elevation)*distance,Math.cos(angle)*Math.cos(elevation)*distance).add(target);
+  camera.lookAt(target);
+  camera.fov = innerWidth<600 ? 52 : 42;
   camera.updateProjectionMatrix();
+  camera.updateMatrixWorld();
 }
 canvas.addEventListener('pointerdown', event => {
   if (drag || (event.button !== 0 && event.button !== 2)) return;
@@ -77,10 +124,10 @@ canvas.addEventListener('pointermove', event => {
   if (!drag || event.pointerId !== drag.id) return;
   const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
   if (drag.mode === 'pan') {
-    // An infinitely distant panorama has no positional parallax; shift its framing instead.
-    const radiansPerPixel = THREE.MathUtils.degToRad(zoom) / canvas.clientHeight;
-    panX -= dx * radiansPerPixel;
-    panY = THREE.MathUtils.clamp(panY + dy * radiansPerPixel, -.7, .7);
+    const unitsPerPixel=2*distance*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))/canvas.clientHeight;
+    cameraRight.setFromMatrixColumn(camera.matrixWorld,0);
+    cameraUp.setFromMatrixColumn(camera.matrixWorld,1);
+    target.addScaledVector(cameraRight,-dx*unitsPerPixel).addScaledVector(cameraUp,dy*unitsPerPixel);
   } else {
     angle -= dx * .004;
     elevation = THREE.MathUtils.clamp(elevation + dy * .003, -.7, .7);
@@ -98,7 +145,7 @@ canvas.addEventListener('contextmenu', event => event.preventDefault());
 canvas.addEventListener('wheel', event => {
   event.preventDefault();
   const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1);
-  targetZoom = THREE.MathUtils.clamp(targetZoom + delta * .025, 30, 85);
+  targetDistance = THREE.MathUtils.clamp(targetDistance + delta * .008, 6.5, 19);
 }, { passive: false });
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -108,7 +155,7 @@ addEventListener('resize', () => {
 let lastTime = performance.now();
 renderer.setAnimationLoop(time => {
   const dt = Math.min((time - lastTime) / 1000, .1); lastTime = time;
-  zoom += (targetZoom - zoom) * (1 - Math.exp(-12 * dt));
+  distance += (targetDistance - distance) * (1 - Math.exp(-12 * dt));
   updateCamera();
   renderer.render(scene, camera);
 });
