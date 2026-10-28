@@ -169,8 +169,6 @@ function createKnightField() {
     }
   }
   groove([[-.411,1.013],[-.383,.998],[-.335,1.004]],.0055);
-  groove([[.265,.60],[.303,.82],[.269,1.045],[.179,1.25],[.070,1.407]],.0045);
-  groove([[.226,.59],[.267,.82],[.233,1.04],[.144,1.245],[.045,1.385]],.004);
   function field(x,y,z) {
     let d=body(x,y,z);
     // A small crown notch separates the short ears; there are no extra horn-like blobs.
@@ -190,6 +188,13 @@ function createKnightField() {
   return {field,surfaceDepth,eyes,nostrils};
 }
 const knightSculpture=createKnightField();
+
+function createKnightMesh(){
+  const g=implicitSurface(knightSculpture.field,[-.52,.44,-.27],[.43,1.61,.27],[96,128,64]);
+  const positions=g.getAttribute('position'),uv=[];
+  for(let i=0;i<positions.count;i++)uv.push(.5+Math.atan2(positions.getZ(i),positions.getX(i))/(Math.PI*2),positions.getY(i)/1.61);
+  g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));return g;
+}
 
 function bishopField(x, y, z) {
   let d = ellipsoid(x, y, z, 0, 1.255, 0, .18, .255, .18);
@@ -236,7 +241,7 @@ export function createSculptures() {
     }),
     pawn: turnedBody(.70), king: turnedBody(1.28), queen: turnedBody(1.22), bishop: turnedBody(1.015),
     knightPlinth: revolved(p => {p.moveTo(0,.18);p.lineTo(.28,.18);p.quadraticCurveTo(.31,.215,.27,.25);p.bezierCurveTo(.22,.275,.185,.305,.19,.345);p.quadraticCurveTo(.193,.39,.255,.414);p.quadraticCurveTo(.297,.435,.277,.464);p.lineTo(.253,.488);p.lineTo(0,.488);p.closePath();}),
-    knight: implicitSurface(knightSculpture.field, [-.52,.44,-.27], [.43,1.61,.27], [96,128,64]),
+    knight: createKnightMesh(),
     bishopHead: implicitSurface(bishopField, [-.23,1.0,-.23], [.23,1.59,.23], [42,60,42]),
     rook: revolved(p => {p.moveTo(0,.19);p.lineTo(.26,.19);p.quadraticCurveTo(.30,.24,.26,.30);p.bezierCurveTo(.19,.40,.165,.77,.17,1.00);p.quadraticCurveTo(.173,1.10,.25,1.13);p.quadraticCurveTo(.29,1.16,.29,1.205);p.lineTo(.28,1.27);p.lineTo(.18,1.27);p.lineTo(.18,1.195);p.lineTo(0,1.195);p.closePath();}),
     rookBattlement: rookBattlement(), queenCrown: queenCrown().translate(0,.1,0), kingCross: crossGeometry(),
@@ -246,6 +251,18 @@ export function createSculptures() {
 
 export function buildChessPieces({ board, ivory, amberBase, obsidian, whiteTrim, blackTrim, whiteGlow, blackGlow, shadowMap, poolMap, disk, random }) {
   const shapes = createSculptures(), pieces = [];
+  // The final reference is a solid carving. Its broad faces must not read as clear glass plates.
+  const grainCanvas=document.createElement('canvas');grainCanvas.width=128;grainCanvas.height=256;
+  const grainContext=grainCanvas.getContext('2d'),grainPixels=grainContext.createImageData(128,256);
+  for(let y=0;y<256;y++)for(let x=0;x<128;x++){
+    const wave=x*Math.PI/8+2*Math.sin(y*.026)+.7*Math.sin(y*.075);
+    const n=190+11*Math.sin(wave)+3*Math.sin(wave*3+y*.014),i=(x+y*128)*4;
+    grainPixels.data[i]=grainPixels.data[i+1]=grainPixels.data[i+2]=n;grainPixels.data[i+3]=255;
+  }
+  grainContext.putImageData(grainPixels,0,0);
+  const grain=new THREE.CanvasTexture(grainCanvas);grain.wrapS=grain.wrapT=THREE.RepeatWrapping;
+  const knightIvory=ivory.clone();knightIvory.color.set('#f8e8ca');knightIvory.transmission=.08;knightIvory.roughness=.23;knightIvory.clearcoat=.65;knightIvory.bumpMap=grain;knightIvory.bumpScale=.0025;
+  const knightObsidian=obsidian.clone();knightObsidian.metalness=.2;knightObsidian.roughness=.20;knightObsidian.clearcoat=.75;knightObsidian.bumpMap=grain;knightObsidian.bumpScale=.0025;
   const eye = new THREE.MeshPhysicalMaterial({color:'#211508',roughness:.12,metalness:.15,clearcoat:1});
   const blueEye = new THREE.MeshPhysicalMaterial({color:'#06172a',roughness:.1,metalness:.4,clearcoat:1});
   function add(geometry, material, parent, x=0, y=0, z=0) {const m=new THREE.Mesh(geometry,material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
@@ -277,10 +294,11 @@ export function buildChessPieces({ board, ivory, amberBase, obsidian, whiteTrim,
     if(type==='bishop') {add(shapes.bishop,material,p);add(shapes.bishopHead,material,p);ring(.174,.009,.961,trim,p);ball(.042,material,p,0,1.58,0);}
     if(type==='rook') {add(shapes.rook,material,p);for(let i=0;i<6;i++){const battlement=add(shapes.rookBattlement,material,p);battlement.rotation.y=i*Math.PI/3;}ring(.274,.009,1.18,trim,p);}
     if(type==='knight') {
-      add(shapes.knightPlinth,material,p);add(shapes.knight,material,p);
+      const carved=white?knightIvory:knightObsidian;
+      add(shapes.knightPlinth,carved,p);add(shapes.knight,carved,p);
       const {eyes,nostrils}=knightSculpture;
       for(const side of [-1,1]){
-        const e=ball(.008,material,p,eyes.x,eyes.y,side*(eyes.z-.006));e.scale.z*=.65;
+        const e=ball(.008,carved,p,eyes.x,eyes.y,side*(eyes.z-.006));e.scale.z*=.65;
         const n=ball(.006,white?eye:blueEye,p,nostrils.x,nostrils.y,side*(nostrils.z-.006));n.scale.set(.007,.005,.004);
       }
       ring(.264,.008,.448,trim,p);
