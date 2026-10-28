@@ -47,10 +47,10 @@ function inclusions(material, day) {
         return light;
       }
     `).replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-      totalEmissiveRadiance += gemInterior(gemPosition, normalize(gemView));
+      totalEmissiveRadiance += gemInterior(gemPosition, normalize(gemView)) * ${day ? '.22' : '.025'};
     `);
   };
-  material.customProgramCacheKey = () => `celestial-gem-${day ? 'day-clear-v3' : 'night-v2'}`;
+  material.customProgramCacheKey = () => `celestial-gem-${day ? 'day-clear-v4' : 'night-v3'}`;
   return material;
 }
 
@@ -64,13 +64,13 @@ export function createGemMaterials() {
     attenuationColor:'#f5fbff', attenuationDistance:12,
     clearcoat:.25, clearcoatRoughness:.015, envMapIntensity:.85});
   const obsidian = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#101b3e',
-    transmission:.62, thickness:.78, ior:1.56, attenuationColor:'#232353', attenuationDistance:.28}), false);
+    transmission:.62, thickness:.78, ior:1.56, attenuationColor:'#232353', attenuationDistance:.28, envMapIntensity:.16}), false);
   const amberBase = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#fffaf0',
     transmission:.98, thickness:.22, attenuationColor:'#ffe2ac', attenuationDistance:1.2,
-    emissive:'#ffba50', emissiveIntensity:.28}), true);
+    emissive:'#ffba50', emissiveIntensity:.045}), true);
   const whiteTrim = new THREE.MeshPhysicalMaterial({...common, color:'#fff0ce', transmission:.95,
-    thickness:.06, emissive:'#ffbd54', emissiveIntensity:.16});
+    thickness:.06, emissive:'#ffbd54', emissiveIntensity:.035});
   const blackTrim = new THREE.MeshPhysicalMaterial({...common, color:'#132e68', transmission:.55,
-    thickness:.10, emissive:'#2777e5', emissiveIntensity:.12});
+    thickness:.10, emissive:'#2777e5', emissiveIntensity:.003, envMapIntensity:.12});
   return {ivory,obsidian,amberBase,whiteTrim,blackTrim};
 }

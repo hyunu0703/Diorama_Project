@@ -274,7 +274,7 @@ export function buildChessPieces({ board, ivory, amberBase, obsidian, whiteTrim,
     }
     const positions=[];for(let i=0;i<40;i++){const a=random()*Math.PI*2,r=.15+random()*.20;positions.push(Math.cos(a)*r,.10+random()*.05,Math.sin(a)*r);}
     const glints=new THREE.BufferGeometry();glints.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
-    const color=new THREE.Color(white?'#ffd48a':'#29a5ff').multiplyScalar(white?4:2.8);
+    const color=new THREE.Color(white?'#ffd48a':'#29a5ff').multiplyScalar(white?.65:.035);
     p.add(new THREE.Points(glints,new THREE.PointsMaterial({color,size:white?.027:.022,map:poolMap,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending})));
     if(type==='pawn') {add(shapes.pawn,material,p);ball(.205,material,p,0,.867,0);ring(.173,.008,.663,trim,p);}
     if(type==='king') {add(shapes.king,material,p);ring(.19,.008,1.18,trim,p);ball(.121,material,p,0,1.37,0);add(shapes.kingCross,material,p);}
