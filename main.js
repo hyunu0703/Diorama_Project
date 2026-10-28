@@ -23,7 +23,8 @@ const softMap=new THREE.CanvasTexture(softbox);softMap.colorSpace=THREE.SRGBColo
 function card(w,h,x,y,z,color,intensity){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:softMap,color:new THREE.Color(color).multiplyScalar(intensity),side:THREE.DoubleSide}));m.position.set(x,y,z);m.lookAt(0,0,0);studio.add(m);}
 // Soft reflected light belongs to the pieces; stage lighting and board materials are untouched.
 card(7,7,-3,7,5,'#fff1dc',3);card(5,6,4,4,4,'#fff5e5',2);
-card(6,7,-4,5,-5,'#268cff',5);card(3,6,4,4,-4,'#78bdff',4);
+card(6,7,-4,5,-5,'#268cff',8);card(3,6,4,4,-4,'#78bdff',6);
+card(5,6,-5,4,4,'#79bfff',4);
 card(6,4,0,8,0,'#fff7e8',2.5);
 let environment=pmrem.fromScene(studio,.025);scene.environment=environment.texture;scene.environmentIntensity=.12;document.body.dataset.environment='ready';
 // Dark matte stage; the light stays attached to the board's day side.

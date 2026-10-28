@@ -190,6 +190,14 @@ export function createSculptures() {
 
 export function buildChessPieces({ board, ivory, ivoryTop, amberBase, obsidian, whiteTrim, blackTrim, whiteGlow, blackGlow, shadowMap, poolMap, disk, random }) {
   const shapes = createSculptures(), pieces = [];
+  // Small diffraction cores: larger than the old subpixel dots, still confined inside each pedestal.
+  const starCanvas=document.createElement('canvas');starCanvas.width=starCanvas.height=128;
+  const starContext=starCanvas.getContext('2d'),starGradient=starContext.createRadialGradient(64,64,0,64,64,64);
+  starGradient.addColorStop(0,'rgba(255,255,255,1)');starGradient.addColorStop(.12,'rgba(255,255,255,.95)');starGradient.addColorStop(.35,'rgba(255,255,255,.22)');starGradient.addColorStop(1,'rgba(255,255,255,0)');
+  starContext.fillStyle=starGradient;starContext.fillRect(0,0,128,128);
+  starContext.strokeStyle='rgba(255,255,255,.75)';starContext.lineWidth=2;
+  starContext.beginPath();starContext.moveTo(64,18);starContext.lineTo(64,110);starContext.moveTo(18,64);starContext.lineTo(110,64);starContext.stroke();
+  const starMap=new THREE.CanvasTexture(starCanvas);
   const eye = new THREE.MeshPhysicalMaterial({color:'#211508',roughness:.12,metalness:.15,clearcoat:1});
   const blueEye = new THREE.MeshPhysicalMaterial({color:'#06172a',roughness:.1,metalness:.4,clearcoat:1});
   function add(geometry, material, parent, x=0, y=0, z=0) {const m=new THREE.Mesh(geometry,material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
@@ -208,13 +216,13 @@ export function buildChessPieces({ board, ivory, ivoryTop, amberBase, obsidian, 
       // Fine trapped-light filaments, rather than a broad opaque luminous disc.
       for(let j=0;j<3;j++){
         const points=[];for(let i=0;i<=20;i++){const a=i/20*Math.PI*2,r=.14+j*.057;points.push([Math.cos(a)*r,.075+Math.sin(a*3+j)*.025,Math.sin(a)*r]);}
-        curve(points,.0018,whiteTrim,p);
+        curve(points,.0025,whiteGlow,p);
       }
     }
     const positions=[];for(let i=0;i<40;i++){const a=random()*Math.PI*2,r=.15+random()*.20;positions.push(Math.cos(a)*r,.075+random()*.09,Math.sin(a)*r);}
     const glints=new THREE.BufferGeometry();glints.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
-    const color=new THREE.Color(white?'#ffd48a':'#29a5ff').multiplyScalar(white?2.6:1.8);
-    p.add(new THREE.Points(glints,new THREE.PointsMaterial({color,size:white?.040:.027,map:poolMap,transparent:true,depthWrite:false,depthTest:false,blending:THREE.AdditiveBlending})));
+    const color=new THREE.Color(white?'#ffd48a':'#29a5ff').multiplyScalar(white?6:3.8);
+    p.add(new THREE.Points(glints,new THREE.PointsMaterial({color,size:white?.095:.065,map:starMap,transparent:true,depthWrite:false,depthTest:false,blending:THREE.AdditiveBlending})));
     if(type==='pawn') {add(shapes.pawn,material,p);ball(.205,top,p,0,.867,0);ring(.173,.008,.663,trim,p);}
     if(type==='king') {add(shapes.king,material,p);ring(.19,.008,1.18,trim,p);ball(.121,top,p,0,1.37,0);add(shapes.kingCross,top,p);}
     if(type==='queen') {add(shapes.queen,material,p);add(shapes.queenCrown,top,p);ring(.19,.008,1.15,trim,p);for(let i=0;i<8;i++){const a=i*Math.PI/4;ball(.031,top,p,Math.cos(a)*.258,1.518,Math.sin(a)*.258);}ball(.087,top,p,0,1.53,0);ball(.038,top,p,0,1.64,0);}
