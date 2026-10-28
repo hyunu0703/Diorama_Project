@@ -85,9 +85,9 @@ export function createGemMaterials() {
     attenuationColor:'#fff0d4', attenuationDistance:2.8,
     emissive:'#fff0d3', emissiveIntensity:.008,
     clearcoat:1, clearcoatRoughness:.025, envMapIntensity:1.8}),true);
-  const ivoryTop = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#fff7e7',
-    transmission:.82, thickness:.22, roughness:.035,
-    emissive:'#fff0d5', emissiveIntensity:.12, envMapIntensity:1.5}),true);
+  // Share one glass material across spherical heads, carved heads and crown details.
+  // Separate cap parameters previously made some white heads look opaque and creamy.
+  const ivoryTop = ivory;
   const obsidian = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#020409',
     transmission:.06, thickness:.78, ior:1.56, attenuationColor:'#07152e',
     attenuationDistance:.28, envMapIntensity:1.4}), false);
