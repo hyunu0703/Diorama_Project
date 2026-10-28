@@ -88,22 +88,36 @@ export function implicitSurface(field, min, max, resolution) {
 }
 
 function createKnightField() {
-  // Reference silhouette: diagonal Roman nose, defined jaw, deep throat and a swept back.
-  // A varying, rounded cross section gives this outline a sculpted volume, not flat faces.
+  // Final reference: the paired wooden Staunton knights, with planar carving and a short ear.
   const profile = new THREE.Path();
-  profile.moveTo(-.275, .325);
-  profile.bezierCurveTo(-.28, .46, -.19, .66, -.105, .855);
-  profile.bezierCurveTo(-.054, .967, -.04, 1.074, -.091, 1.16);
-  profile.quadraticCurveTo(-.146, 1.227, -.219, 1.185);
-  profile.quadraticCurveTo(-.288, 1.12, -.365, 1.133);
-  profile.quadraticCurveTo(-.435, 1.125, -.486, 1.178);
-  profile.quadraticCurveTo(-.53, 1.217, -.505, 1.265);
-  profile.bezierCurveTo(-.461, 1.327, -.392, 1.36, -.337, 1.414);
-  profile.bezierCurveTo(-.259, 1.48, -.215, 1.563, -.12, 1.603);
-  profile.bezierCurveTo(-.054, 1.636, .035, 1.635, .113, 1.584);
-  profile.bezierCurveTo(.218, 1.514, .267, 1.36, .259, 1.164);
-  profile.bezierCurveTo(.254, 1.007, .188, .841, .18, .70);
-  profile.bezierCurveTo(.173, .553, .244, .431, .297, .325);
+  profile.moveTo(-.296,.493);
+  profile.lineTo(-.034,1.037);
+  profile.lineTo(-.139,1.027);
+  profile.lineTo(-.284,.987);
+  profile.quadraticCurveTo(-.299,.978,-.306,.944);
+  profile.lineTo(-.347,.925);
+  profile.quadraticCurveTo(-.367,.925,-.377,.949);
+  profile.lineTo(-.397,.976);
+  profile.lineTo(-.411,1.016);
+  profile.lineTo(-.433,1.052);
+  profile.quadraticCurveTo(-.447,1.076,-.425,1.093);
+  profile.lineTo(-.354,1.142);
+  profile.lineTo(-.281,1.218);
+  profile.lineTo(-.251,1.265);
+  profile.lineTo(-.249,1.302);
+  profile.lineTo(-.153,1.397);
+  profile.lineTo(-.068,1.409);
+  profile.lineTo(-.064,1.538);
+  profile.lineTo(-.025,1.531);
+  profile.quadraticCurveTo(.032,1.511,.079,1.459);
+  profile.lineTo(.153,1.385);
+  profile.lineTo(.136,1.362);
+  profile.lineTo(.196,1.302);
+  profile.lineTo(.185,1.278);
+  profile.quadraticCurveTo(.292,1.139,.323,.948);
+  profile.bezierCurveTo(.353,.811,.348,.664,.314,.581);
+  profile.quadraticCurveTo(.285,.49,.202,.481);
+  profile.lineTo(-.209,.481);
   profile.closePath();
   const outline = profile.getPoints(12);
   const minX=-.65, maxX=.43, minY=.23, maxY=1.85, nx=192, ny=288;
@@ -131,28 +145,45 @@ function createKnightField() {
     return THREE.MathUtils.lerp(THREE.MathUtils.lerp(distances[a],distances[a+1],tx),THREE.MathUtils.lerp(distances[a+nx+1],distances[a+nx+2],tx),ty);
   }
   function body(x,y,z) {
-    const head=THREE.MathUtils.smoothstep(y,1.12,1.48);
-    const halfWidth=THREE.MathUtils.lerp(.202,.155,head);
-    return distance2D(x,y)+.145*Math.pow(Math.abs(z)/halfWidth,2.6);
+    const d=distance2D(x,y);
+    const head=THREE.MathUtils.smoothstep(y,.97,1.40);
+    const muzzle=THREE.MathUtils.smoothstep(-x,.25,.44);
+    let halfWidth=THREE.MathUtils.lerp(.182,.139,head)*THREE.MathUtils.lerp(1,.78,muzzle);
+    halfWidth*=1-.42*THREE.MathUtils.smoothstep(y,1.415,1.54);
+    halfWidth+=.018*THREE.MathUtils.clamp(-d/.20,0,1);
+    const bevel=.025,a=d+bevel,b=Math.abs(z)-halfWidth+bevel;
+    return Math.min(Math.max(a,b),0)+Math.hypot(Math.max(a,0),Math.max(b,0))-bevel;
   }
   function surfaceDepth(x,y) {
     let a=0,b=.34;
     for(let i=0;i<22;i++){const z=(a+b)/2;if(body(x,y,z)<0)a=z;else b=z;}
     return (a+b)/2;
   }
-  const eyes={x:-.213,y:1.458,z:surfaceDepth(-.213,1.458)};
-  const nostrils={x:-.472,y:1.253,z:surfaceDepth(-.472,1.253)};
+  const eyes={x:-.206,y:1.273,z:surfaceDepth(-.206,1.273)};
+  const nostrils={x:-.397,y:1.070,z:surfaceDepth(-.397,1.070)};
+  const cuts=[];
+  function groove(points,radius){
+    for(const side of[-1,1])for(let i=1;i<points.length;i++){
+      const a=points[i-1],b=points[i];
+      cuts.push({a:[a[0],a[1],side*(surfaceDepth(...a)-.002)],b:[b[0],b[1],side*(surfaceDepth(...b)-.002)],radius});
+    }
+  }
+  groove([[-.411,1.013],[-.383,.998],[-.335,1.004]],.0055);
+  groove([[.265,.60],[.303,.82],[.269,1.045],[.179,1.25],[.070,1.407]],.0045);
+  groove([[.226,.59],[.267,.82],[.233,1.04],[.144,1.245],[.045,1.385]],.004);
   function field(x,y,z) {
     let d=body(x,y,z);
-    // Two separate, tapered ears. Tips are angled forward, rather than rounded rabbit ears.
+    // A small crown notch separates the short ears; there are no extra horn-like blobs.
+    const earNotch=Math.max(Math.abs(z)-.022,1.447-y);
+    d=Math.max(d,-earNotch);
     for(const side of[-1,1]){
-      const h=(y-1.535)/.245,t=THREE.MathUtils.clamp(h,0,1);
-      const radius=.051*Math.sin(Math.PI*Math.pow(t,.65));
-      const ear=Math.max(Math.hypot(x-(-.035-.072*t),(z-side*(.098+.018*t))/.66)-radius,-h*.245,(h-1)*.245);
-      d=smoothUnion(d,ear,.018);
-      // Small recessed sockets; their insets follow the rounded cheek instead of floating.
-      d=Math.max(d,-ellipsoid(x,y,z,eyes.x,eyes.y,side*(eyes.z-.004),.027,.022,.018));
-      d=Math.max(d,-ellipsoid(x,y,z,nostrils.x,nostrils.y,side*(nostrils.z-.002),.014,.011,.012));
+      d=Math.max(d,-ellipsoid(x,y,z,eyes.x,eyes.y,side*(eyes.z-.002),.020,.013,.010));
+      d=Math.max(d,-ellipsoid(x,y,z,nostrils.x,nostrils.y,side*(nostrils.z-.002),.014,.012,.010));
+    }
+    for(const {a,b,radius} of cuts){
+      const vx=b[0]-a[0],vy=b[1]-a[1],vz=b[2]-a[2],px=x-a[0],py=y-a[1],pz=z-a[2];
+      const t=THREE.MathUtils.clamp((px*vx+py*vy+pz*vz)/(vx*vx+vy*vy+vz*vz),0,1);
+      d=Math.max(d,-(Math.hypot(px-t*vx,py-t*vy,pz-t*vz)-radius));
     }
     return d;
   }
@@ -204,8 +235,8 @@ export function createSculptures() {
       p.bezierCurveTo(.335, .148, .334, .177, .30, .193);p.quadraticCurveTo(.275, .21, .25, .215);p.lineTo(0,.215);p.closePath();
     }),
     pawn: turnedBody(.70), king: turnedBody(1.28), queen: turnedBody(1.22), bishop: turnedBody(1.015),
-    knightPlinth: revolved(p => {p.moveTo(0,.18);p.lineTo(.26,.18);p.quadraticCurveTo(.29,.25,.23,.32);p.quadraticCurveTo(.21,.36,.22,.405);p.lineTo(0,.405);p.closePath();}),
-    knight: implicitSurface(knightSculpture.field, [-.63,.26,-.32], [.40,1.84,.32], [88,128,56]),
+    knightPlinth: revolved(p => {p.moveTo(0,.18);p.lineTo(.28,.18);p.quadraticCurveTo(.31,.215,.27,.25);p.bezierCurveTo(.22,.275,.185,.305,.19,.345);p.quadraticCurveTo(.193,.39,.255,.414);p.quadraticCurveTo(.297,.435,.277,.464);p.lineTo(.253,.488);p.lineTo(0,.488);p.closePath();}),
+    knight: implicitSurface(knightSculpture.field, [-.52,.44,-.27], [.43,1.61,.27], [96,128,64]),
     bishopHead: implicitSurface(bishopField, [-.23,1.0,-.23], [.23,1.59,.23], [42,60,42]),
     rook: revolved(p => {p.moveTo(0,.19);p.lineTo(.26,.19);p.quadraticCurveTo(.30,.24,.26,.30);p.bezierCurveTo(.19,.40,.165,.77,.17,1.00);p.quadraticCurveTo(.173,1.10,.25,1.13);p.quadraticCurveTo(.29,1.16,.29,1.205);p.lineTo(.28,1.27);p.lineTo(.18,1.27);p.lineTo(.18,1.195);p.lineTo(0,1.195);p.closePath();}),
     rookBattlement: rookBattlement(), queenCrown: queenCrown().translate(0,.1,0), kingCross: crossGeometry(),
@@ -247,17 +278,12 @@ export function buildChessPieces({ board, ivory, amberBase, obsidian, whiteTrim,
     if(type==='rook') {add(shapes.rook,material,p);for(let i=0;i<6;i++){const battlement=add(shapes.rookBattlement,material,p);battlement.rotation.y=i*Math.PI/3;}ring(.274,.009,1.18,trim,p);}
     if(type==='knight') {
       add(shapes.knightPlinth,material,p);add(shapes.knight,material,p);
-      const {eyes,nostrils,surfaceDepth}=knightSculpture;
+      const {eyes,nostrils}=knightSculpture;
       for(const side of [-1,1]){
-        const e=ball(.016,white?eye:blueEye,p,eyes.x,eyes.y,side*(eyes.z-.009));e.scale.z*=.65;
-        const n=ball(.009,white?eye:blueEye,p,nostrils.x,nostrils.y,side*(nostrils.z-.006));n.scale.set(.010,.007,.006);
-        const mouth=[[-.49,1.207],[-.448,1.188],[-.376,1.19]].map(([x,y])=>[x,y,side*(surfaceDepth(x,y)+.001)]);
-        curve(mouth,.0028,white?eye:blueEye,p);
+        const e=ball(.008,material,p,eyes.x,eyes.y,side*(eyes.z-.006));e.scale.z*=.65;
+        const n=ball(.006,white?eye:blueEye,p,nostrils.x,nostrils.y,side*(nostrils.z-.006));n.scale.set(.007,.005,.004);
       }
-      // One broad continuous mane follows the poll and back. No transverse wire bands.
-      const mane=curve([[.067,1.62,0],[.183,1.529,0],[.256,1.36,0],[.276,1.17,0],[.244,.98,0],[.205,.79,0],[.222,.59,0]],.025,material,p);
-      mane.scale.z=2.25;
-      ring(.215,.009,.36,trim,p);
+      ring(.264,.008,.448,trim,p);
     }
     if(type==='knight')p.rotation.y=column<4?Math.PI:0;
     else if(white)p.rotation.y=Math.PI;
