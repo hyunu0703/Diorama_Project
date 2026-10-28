@@ -54,10 +54,17 @@ function inclusions(material, day) {
       vec3 gemWorldNormal=inverseTransformDirection(normal,viewMatrix);
       float gemBlueSoft=pow(max(dot(gemWorldNormal,normalize(vec3(-.7,.8,.5))),0.0),5.0);
       float gemBlueSide=pow(max(dot(gemWorldNormal,normalize(vec3(.8,.3,-.6))),0.0),8.0);
-      totalEmissiveRadiance += ${day ? 'vec3(1.0,.92,.76)*(.006+.22*gemEdge+.06*gemBlueSoft)' : 'vec3(.025,.26,1.0)*(.020+.45*gemEdge+.20*gemBlueSoft+.17*gemBlueSide)'};
+      // View-dependent glossy reflections occur on every sculpted surface, at every height.
+      // There is no blue diffuse wash: black remains black between the reflected highlights.
+      vec3 gemReflected=reflect(-normalize(gemView),gemWorldNormal);
+      float gemSpecKey=pow(max(dot(gemReflected,normalize(vec3(-.5,.85,.55))),0.0),44.0);
+      float gemSpecFill=pow(max(dot(gemReflected,normalize(vec3(.8,.55,-.65))),0.0),32.0);
+      float gemSpecFront=pow(max(dot(gemReflected,normalize(vec3(-.3,.4,1.0))),0.0),64.0);
+      totalEmissiveRadiance += ${day ? 'vec3(1.0,.92,.76)*(.006+.22*gemEdge+.06*gemBlueSoft)+vec3(1.0,.95,.85)*(.85*gemSpecKey+.55*gemSpecFill+.40*gemSpecFront)' : 'vec3(.035,.25,1.0)*(.20*gemEdge*gemEdge*(.20+.80*gemBlueSoft)+1.25*gemSpecFill)+vec3(.65,.82,1.0)*(.95*gemSpecKey+.50*gemSpecFront)'};
+
     `);
   };
-  material.customProgramCacheKey = () => `celestial-reference-${day ? 'ivory-clear-v3' : 'obsidian-bright-v3'}`;
+  material.customProgramCacheKey = () => `celestial-reference-${day ? 'ivory-gloss-v4' : 'obsidian-black-gloss-v4'}`;
   return material;
 }
 
@@ -73,15 +80,15 @@ export function createGemMaterials() {
   const ivoryTop = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#fff7e7',
     transmission:.82, thickness:.22, roughness:.035,
     emissive:'#fff0d5', emissiveIntensity:.12, envMapIntensity:1.5}),true);
-  const obsidian = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#102749',
+  const obsidian = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#020409',
     transmission:.06, thickness:.78, ior:1.56, attenuationColor:'#07152e',
-    attenuationDistance:.28, envMapIntensity:2.8}), false);
+    attenuationDistance:.28, envMapIntensity:1.4}), false);
   const amberBase = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#fff4df',
     transmission:1, thickness:.15, attenuationColor:'#ffdd96', attenuationDistance:1.8,
     emissive:'#ffcc78', emissiveIntensity:.008, envMapIntensity:1.5}), true);
   const whiteTrim = new THREE.MeshPhysicalMaterial({...common, color:'#fff0ce', transmission:.9,
     thickness:.06, emissive:'#ffd18b', emissiveIntensity:.08});
-  const blackTrim = new THREE.MeshPhysicalMaterial({...common, color:'#071932', transmission:.08,
-    thickness:.10, emissive:'#1875df', emissiveIntensity:.15, envMapIntensity:2.5});
+  const blackTrim = new THREE.MeshPhysicalMaterial({...common, color:'#030811', transmission:.08,
+    thickness:.10, emissive:'#1875df', emissiveIntensity:.035, envMapIntensity:1.4});
   return {ivory,ivoryTop,obsidian,amberBase,whiteTrim,blackTrim};
 }
