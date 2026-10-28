@@ -64,8 +64,8 @@ new RGBELoader().load('./assets/studio_small_09_1k.hdr', hdr => {
   hdr.mapping = THREE.EquirectangularReflectionMapping;
   const reflectionStudio = new THREE.Scene();
   reflectionStudio.background = hdr;
-  const softboxMaterial = new THREE.MeshBasicMaterial({color:new THREE.Color(1,1,1).multiplyScalar(18),side:THREE.DoubleSide});
-  const softboxGeometry = new THREE.PlaneGeometry(1.2,5);
+  const softboxMaterial = new THREE.MeshBasicMaterial({color:new THREE.Color(1,1,1).multiplyScalar(4),side:THREE.DoubleSide});
+  const softboxGeometry = new THREE.PlaneGeometry(.3,3.5);
   for(const position of [[6,-2,6],[-6,-2,-6],[-5,4,6]]) {
     const softbox = new THREE.Mesh(softboxGeometry,softboxMaterial);
     softbox.position.set(...position);softbox.lookAt(0,0,0);reflectionStudio.add(softbox);
@@ -75,7 +75,8 @@ new RGBELoader().load('./assets/studio_small_09_1k.hdr', hdr => {
   reflectionCamera.update(renderer,reflectionStudio);
   const generator = new THREE.PMREMGenerator(renderer);
   const studio = generator.fromCubemap(reflectionCapture.texture);
-  scene.environment = studio.texture;
+  scene.environment = generator.fromEquirectangular(hdr).texture;
+  glass.envMap = studio.texture; glass.needsUpdate = true;
   scene.environmentRotation.y = 0;
   reflectionCapture.dispose();softboxGeometry.dispose();softboxMaterial.dispose();
   hdr.dispose();
@@ -197,4 +198,5 @@ renderer.setAnimationLoop(time => {
   updateCamera();
   renderer.render(scene, camera);
 });
+
 
