@@ -104,8 +104,8 @@ function caseBox(w,h,d,x,y,z,material=metal){
 }
 const W=2.6,H=4.2,D=3.6;
 caseBox(W,.14,D,0,-H/2,0,panel);
-caseBox(.08,H,D,-W/2,0,0,panel);
-caseBox(W,H,.08,0,0,D/2,panel);
+// The former solid side/back panels filled the view behind the clear glass.
+// Leave these two faces open: their perimeter rails remain part of the chassis.
 // The narrow glass face is opposite its original position; match the open corner.
 for(const y of [-H/2+.08,H/2]){
   for(const z of [-D/2,D/2])caseBox(W,.085,.075,0,y,z);
