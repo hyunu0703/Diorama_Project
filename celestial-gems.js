@@ -37,7 +37,7 @@ function inclusions(material, day) {
           ${day ? `
           float cloud=smoothstep(.47,.78,mist);
           float pedestal=exp(-max(p.y,0.0)*5.0);
-          light+=vec3(1.0,.84,.58)*(0.065+pedestal*(.12+.12*cloud));
+          light+=vec3(1.0,.78,.43)*(0.030+pedestal*(.16+.18*cloud));
           light+=vec3(1.0,.79,.43)*star*(1.0+3.0*exp(-max(p.y,0.0)*5.0));
           ` : `
           float nebula=smoothstep(.36,.79,mist);
