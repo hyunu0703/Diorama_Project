@@ -49,7 +49,7 @@ const pmrem = new THREE.PMREMGenerator(renderer);
 const environment = pmrem.fromCubemap(capture.texture);
 scene.background = environment.texture;
 scene.environment = environment.texture;
-scene.backgroundBlurriness = .22;
+scene.backgroundBlurriness = .07;
 scene.backgroundIntensity = 1.1;
 capture.dispose();
 pmrem.dispose();
