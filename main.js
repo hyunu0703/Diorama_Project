@@ -1,5 +1,6 @@
 import * as THREE from './three.module.js';
 import { buildChessPieces } from './chess-models.js';
+import { createGemMaterials } from './celestial-gems.js';
 
 const scene=new THREE.Scene();scene.background=new THREE.Color('#aa9180');scene.fog=new THREE.FogExp2('#aa9180',.012);
 const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,100);
@@ -10,11 +11,7 @@ renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.
 document.querySelector('#world').appendChild(renderer.domElement);
 const canvas=renderer.domElement;canvas.setAttribute('aria-label','3D 체스보드. 드래그 회전, 휠 확대.');canvas.setAttribute('role','img');
 let seed=7452;function random(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}
-const ivory=new THREE.MeshPhysicalMaterial({color:'#fff7e8',metalness:0,roughness:.095,transmission:.4,thickness:.38,ior:1.47,attenuationColor:'#ffe3b3',attenuationDistance:2.2,clearcoat:1,clearcoatRoughness:.065,envMapIntensity:1});
-const amberBase=new THREE.MeshPhysicalMaterial({color:'#fff1d8',metalness:0,roughness:.055,transmission:.86,thickness:.26,ior:1.49,attenuationColor:'#ffda9b',attenuationDistance:1.2,emissive:'#ffbf59',emissiveIntensity:.035,clearcoat:1,envMapIntensity:1});
-const obsidian=new THREE.MeshPhysicalMaterial({color:'#020811',metalness:.32,roughness:.085,clearcoat:1,clearcoatRoughness:.065,specularIntensity:1,envMapIntensity:1.3});
-const whiteTrim=new THREE.MeshPhysicalMaterial({color:'#fff0d3',metalness:.22,roughness:.13,emissive:'#ffc778',emissiveIntensity:.18,clearcoat:1});
-const blackTrim=new THREE.MeshPhysicalMaterial({color:'#082949',metalness:.55,roughness:.12,emissive:'#006ed0',emissiveIntensity:.18,clearcoat:1});
+const {ivory,amberBase,obsidian,whiteTrim,blackTrim}=createGemMaterials();
 const whiteGlow=new THREE.MeshBasicMaterial({color:new THREE.Color('#ffb64d').multiplyScalar(4),toneMapped:false});
 const blackGlow=new THREE.MeshBasicMaterial({color:new THREE.Color('#168dff').multiplyScalar(2),toneMapped:false});
 // Environment reflection cards supply broad photographic highlights.

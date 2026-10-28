@@ -251,18 +251,6 @@ export function createSculptures() {
 
 export function buildChessPieces({ board, ivory, amberBase, obsidian, whiteTrim, blackTrim, whiteGlow, blackGlow, shadowMap, poolMap, disk, random }) {
   const shapes = createSculptures(), pieces = [];
-  // The final reference is a solid carving. Its broad faces must not read as clear glass plates.
-  const grainCanvas=document.createElement('canvas');grainCanvas.width=128;grainCanvas.height=256;
-  const grainContext=grainCanvas.getContext('2d'),grainPixels=grainContext.createImageData(128,256);
-  for(let y=0;y<256;y++)for(let x=0;x<128;x++){
-    const wave=x*Math.PI/8+2*Math.sin(y*.026)+.7*Math.sin(y*.075);
-    const n=190+11*Math.sin(wave)+3*Math.sin(wave*3+y*.014),i=(x+y*128)*4;
-    grainPixels.data[i]=grainPixels.data[i+1]=grainPixels.data[i+2]=n;grainPixels.data[i+3]=255;
-  }
-  grainContext.putImageData(grainPixels,0,0);
-  const grain=new THREE.CanvasTexture(grainCanvas);grain.wrapS=grain.wrapT=THREE.RepeatWrapping;
-  const knightIvory=ivory.clone();knightIvory.color.set('#f8e8ca');knightIvory.transmission=.08;knightIvory.roughness=.23;knightIvory.clearcoat=.65;knightIvory.bumpMap=grain;knightIvory.bumpScale=.0025;
-  const knightObsidian=obsidian.clone();knightObsidian.metalness=.2;knightObsidian.roughness=.20;knightObsidian.clearcoat=.75;knightObsidian.bumpMap=grain;knightObsidian.bumpScale=.0025;
   const eye = new THREE.MeshPhysicalMaterial({color:'#211508',roughness:.12,metalness:.15,clearcoat:1});
   const blueEye = new THREE.MeshPhysicalMaterial({color:'#06172a',roughness:.1,metalness:.4,clearcoat:1});
   function add(geometry, material, parent, x=0, y=0, z=0) {const m=new THREE.Mesh(geometry,material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
@@ -275,13 +263,13 @@ export function buildChessPieces({ board, ivory, amberBase, obsidian, whiteTrim,
     const material=white?ivory:obsidian,trim=white?whiteTrim:blackTrim,glow=white?whiteGlow:blackGlow;
     disk(p,.98,.002,shadowMap,'#000000',.74);
     // Light stays inside the glass pedestal. The matte board has no specular reflection or halo decals.
-    add(shapes.base,white?amberBase:obsidian,p);ring(.365,.009,.061,glow,p);ring(.333,.010,.142,trim,p);
+    add(shapes.base,white?amberBase:obsidian,p);ring(.365,.004,.061,trim,p);ring(.333,.010,.142,trim,p);
     if(white){
-      ring(.266,.013,.104,glow,p);ring(.18,.009,.115,whiteTrim,p);
-      const core=ball(.16,whiteGlow,p,0,.084,0);core.scale.y=.022;
+      ring(.266,.006,.104,trim,p);ring(.18,.009,.115,whiteTrim,p);
+      const core=ball(.10,whiteTrim,p,0,.084,0);core.scale.y=.022;
       for(let j=0;j<3;j++){
         const points=[];for(let i=0;i<=20;i++){const a=i/20*Math.PI*2,r=.14+j*.057;points.push([Math.cos(a)*r,.075+Math.sin(a*3+j)*.025,Math.sin(a)*r]);}
-        curve(points,.0035,whiteGlow,p);
+        curve(points,.0018,whiteTrim,p);
       }
     }
     const positions=[];for(let i=0;i<40;i++){const a=random()*Math.PI*2,r=.15+random()*.20;positions.push(Math.cos(a)*r,.10+random()*.05,Math.sin(a)*r);}
@@ -294,7 +282,7 @@ export function buildChessPieces({ board, ivory, amberBase, obsidian, whiteTrim,
     if(type==='bishop') {add(shapes.bishop,material,p);add(shapes.bishopHead,material,p);ring(.174,.009,.961,trim,p);ball(.042,material,p,0,1.58,0);}
     if(type==='rook') {add(shapes.rook,material,p);for(let i=0;i<6;i++){const battlement=add(shapes.rookBattlement,material,p);battlement.rotation.y=i*Math.PI/3;}ring(.274,.009,1.18,trim,p);}
     if(type==='knight') {
-      const carved=white?knightIvory:knightObsidian;
+      const carved=material;
       add(shapes.knightPlinth,carved,p);add(shapes.knight,carved,p);
       const {eyes,nostrils}=knightSculpture;
       for(const side of [-1,1]){
