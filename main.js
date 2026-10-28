@@ -4,13 +4,6 @@ import { createGemMaterials } from './celestial-gems.js';
 import { createDioramaStage } from './diorama-stage.js';
 
 const scene=new THREE.Scene();scene.background=new THREE.Color('#050609');scene.fog=new THREE.FogExp2('#050609',.025);
-// A quiet studio gradient keeps the complete miniature silhouette readable.
-const backdrop=document.createElement('canvas');backdrop.width=64;backdrop.height=512;
-const bc=backdrop.getContext('2d'),bg=bc.createLinearGradient(0,0,0,512);
-bg.addColorStop(0,'#101727');bg.addColorStop(.55,'#1d2940');bg.addColorStop(1,'#363447');
-bc.fillStyle=bg;bc.fillRect(0,0,64,512);
-scene.background=new THREE.CanvasTexture(backdrop);scene.background.colorSpace=THREE.SRGBColorSpace;
-scene.fog=new THREE.FogExp2('#1d2940',.018);
 const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,100);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
