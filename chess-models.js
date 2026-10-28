@@ -249,7 +249,7 @@ export function createSculptures() {
   };
 }
 
-export function buildChessPieces({ board, ivory, amberBase, obsidian, whiteTrim, blackTrim, whiteGlow, blackGlow, shadowMap, poolMap, disk, random }) {
+export function buildChessPieces({ board, ivory, ivoryTop, amberBase, obsidian, whiteTrim, blackTrim, whiteGlow, blackGlow, shadowMap, poolMap, disk, random }) {
   const shapes = createSculptures(), pieces = [];
   const eye = new THREE.MeshPhysicalMaterial({color:'#211508',roughness:.12,metalness:.15,clearcoat:1});
   const blueEye = new THREE.MeshPhysicalMaterial({color:'#06172a',roughness:.1,metalness:.4,clearcoat:1});
@@ -260,7 +260,7 @@ export function buildChessPieces({ board, ivory, amberBase, obsidian, whiteTrim,
   function curve(points,radius,material,parent){const line=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));return add(new THREE.TubeGeometry(line,40,radius,8,false),material,parent);}
   function piece(type,column,row,white) {
     const p=new THREE.Group();p.name=`${white?'ivory':'obsidian'}-${type}-${column}`;p.position.set(column-3.5,.12,row-3.5);board.add(p);
-    const material=white?ivory:obsidian,trim=white?ivory:blackTrim,glow=white?whiteGlow:blackGlow;
+    const material=white?ivory:obsidian,top=white?ivoryTop:obsidian,trim=white?whiteTrim:blackTrim;
     disk(p,.98,.002,shadowMap,'#000000',.74);
     // Light stays inside the glass pedestal. The matte board has no specular reflection or halo decals.
     add(shapes.base,white?amberBase:obsidian,p);ring(.365,.004,.061,white?whiteTrim:trim,p);ring(.333,.010,.142,white?whiteTrim:trim,p);
@@ -272,17 +272,17 @@ export function buildChessPieces({ board, ivory, amberBase, obsidian, whiteTrim,
         curve(points,.0018,whiteTrim,p);
       }
     }
-    const positions=[];for(let i=0;i<40;i++){const a=random()*Math.PI*2,r=.15+random()*.20;positions.push(Math.cos(a)*r,.10+random()*.05,Math.sin(a)*r);}
+    const positions=[];for(let i=0;i<40;i++){const a=random()*Math.PI*2,r=.15+random()*.20;positions.push(Math.cos(a)*r,.075+random()*.09,Math.sin(a)*r);}
     const glints=new THREE.BufferGeometry();glints.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
-    const color=new THREE.Color(white?'#ffd48a':'#29a5ff').multiplyScalar(white?.65:.035);
-    p.add(new THREE.Points(glints,new THREE.PointsMaterial({color,size:white?.027:.022,map:poolMap,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending})));
-    if(type==='pawn') {add(shapes.pawn,material,p);ball(.205,material,p,0,.867,0);ring(.173,.008,.663,trim,p);}
-    if(type==='king') {add(shapes.king,material,p);ring(.19,.008,1.18,trim,p);ball(.121,material,p,0,1.37,0);add(shapes.kingCross,material,p);}
-    if(type==='queen') {add(shapes.queen,material,p);add(shapes.queenCrown,material,p);ring(.19,.008,1.15,trim,p);for(let i=0;i<8;i++){const a=i*Math.PI/4;ball(.031,material,p,Math.cos(a)*.258,1.518,Math.sin(a)*.258);}ball(.087,material,p,0,1.53,0);ball(.038,material,p,0,1.64,0);}
-    if(type==='bishop') {add(shapes.bishop,material,p);add(shapes.bishopHead,material,p);ring(.174,.009,.961,trim,p);ball(.042,material,p,0,1.58,0);}
-    if(type==='rook') {add(shapes.rook,material,p);for(let i=0;i<6;i++){const battlement=add(shapes.rookBattlement,material,p);battlement.rotation.y=i*Math.PI/3;}ring(.274,.009,1.18,trim,p);}
+    const color=new THREE.Color(white?'#ffd48a':'#29a5ff').multiplyScalar(white?2.6:1.8);
+    p.add(new THREE.Points(glints,new THREE.PointsMaterial({color,size:white?.024:.018,map:poolMap,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending})));
+    if(type==='pawn') {add(shapes.pawn,material,p);ball(.205,top,p,0,.867,0);ring(.173,.008,.663,trim,p);}
+    if(type==='king') {add(shapes.king,material,p);ring(.19,.008,1.18,trim,p);ball(.121,top,p,0,1.37,0);add(shapes.kingCross,top,p);}
+    if(type==='queen') {add(shapes.queen,material,p);add(shapes.queenCrown,top,p);ring(.19,.008,1.15,trim,p);for(let i=0;i<8;i++){const a=i*Math.PI/4;ball(.031,top,p,Math.cos(a)*.258,1.518,Math.sin(a)*.258);}ball(.087,top,p,0,1.53,0);ball(.038,top,p,0,1.64,0);}
+    if(type==='bishop') {add(shapes.bishop,material,p);add(shapes.bishopHead,top,p);ring(.174,.009,.961,trim,p);ball(.042,top,p,0,1.58,0);}
+    if(type==='rook') {add(shapes.rook,material,p);for(let i=0;i<6;i++){const battlement=add(shapes.rookBattlement,top,p);battlement.rotation.y=i*Math.PI/3;}ring(.274,.009,1.18,trim,p);}
     if(type==='knight') {
-      const carved=material;
+      const carved=white?ivoryTop:obsidian;
       add(shapes.knightPlinth,carved,p);add(shapes.knight,carved,p);
       const {eyes,nostrils}=knightSculpture;
       for(const side of [-1,1]){

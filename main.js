@@ -11,13 +11,16 @@ renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.
 document.querySelector('#world').appendChild(renderer.domElement);
 const canvas=renderer.domElement;canvas.setAttribute('aria-label','3D 체스보드. 드래그 회전, 휠 확대.');canvas.setAttribute('role','img');
 let seed=7452;function random(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}
-const {ivory,amberBase,obsidian,whiteTrim,blackTrim}=createGemMaterials();
-const whiteGlow=new THREE.MeshBasicMaterial({color:new THREE.Color('#ffb64d').multiplyScalar(.65),toneMapped:false});
+const {ivory,ivoryTop,amberBase,obsidian,whiteTrim,blackTrim}=createGemMaterials();
+const whiteGlow=new THREE.MeshBasicMaterial({color:new THREE.Color('#ffd28b').multiplyScalar(1.65),toneMapped:false});
 const blackGlow=new THREE.MeshBasicMaterial({color:new THREE.Color('#168dff').multiplyScalar(2),toneMapped:false});
 // Environment reflection cards supply broad photographic highlights.
 const pmrem=new THREE.PMREMGenerator(renderer),studio=new THREE.Scene();studio.background=new THREE.Color('#010102');
 function card(w,h,x,y,z,color,intensity){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:new THREE.Color(color).multiplyScalar(intensity),side:THREE.DoubleSide}));m.position.set(x,y,z);m.lookAt(0,0,0);studio.add(m);}
 card(4,5,-3,7,5,'#fff0d9',4);card(3,4,3,3,5,'#eef2ff',2);card(.28,3,4,3,-1,'#b9c9df',1.1);
+// Reflection cards affect only the pieces' environment; board and stage stay unchanged.
+card(2.8,4,-4,4,-5,'#197fff',6);card(.65,5,4,5,-4,'#78bcff',8);
+card(5,2,0,7,0,'#fff4df',3);
 let environment=pmrem.fromScene(studio,.025);scene.environment=environment.texture;scene.environmentIntensity=.12;document.body.dataset.environment='ready';
 // Dark matte stage; the light stays attached to the board's day side.
 const plaster=document.createElement('canvas');plaster.width=plaster.height=512;const pc=plaster.getContext('2d'),pixels=pc.createImageData(512,512);
@@ -42,9 +45,9 @@ function radialTexture(inner,outer){const c=document.createElement('canvas');c.w
 const shadowMap=radialTexture('rgba(0,0,0,.55)','rgba(0,0,0,0)'),poolMap=radialTexture('rgba(255,255,255,.6)','rgba(255,255,255,0)');
 function disk(parent,size,y,map,color,opacity,additive=false){const m=new THREE.Mesh(new THREE.PlaneGeometry(size,size),new THREE.MeshBasicMaterial({map,color,transparent:true,opacity,depthWrite:false,blending:additive?THREE.AdditiveBlending:THREE.NormalBlending}));m.rotation.x=-Math.PI/2;m.position.y=y;parent.add(m);return m;}
 disk(scene,12,-.355,shadowMap,'#241810',.8);
-const {pieces,shapes}=buildChessPieces({board,ivory,amberBase,obsidian,whiteTrim,blackTrim,whiteGlow,blackGlow,shadowMap,poolMap,disk,random});
+const {pieces,shapes}=buildChessPieces({board,ivory,ivoryTop,amberBase,obsidian,whiteTrim,blackTrim,whiteGlow,blackGlow,shadowMap,poolMap,disk,random});
 // Controlled studio reflections prevent the sky artwork from striping the sculptures.
-for(const material of[ivory,amberBase,obsidian,whiteTrim,blackTrim]){material.envMap=environment.texture;material.needsUpdate=true;}
+for(const material of[ivory,ivoryTop,amberBase,obsidian,whiteTrim,blackTrim]){material.envMap=environment.texture;material.needsUpdate=true;}
 document.body.dataset.reflections='ready';
 // Linear HDR scene -> highlight bloom -> filmic display transform.
 const target=new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType,depthBuffer:true}),blurA=new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType,depthBuffer:false}),blurB=blurA.clone();
