@@ -97,7 +97,7 @@ function knightField(x, y, z) {
   d = smoothUnion(d, ellipsoid(x, y, z, -.235, 1.183, 0, .15, .115, .132), .04);
   // Throat undercut makes a proper arched equine neck.
   d = Math.max(d, -ellipsoid(x, y, z, -.235, .95, 0, .23, .205, .4));
-  for (const side of [-1, 1]) d = smoothUnion(d, ellipsoid(x, y, z, -.025, 1.535, side * .108, .064, .17, .047, -.2), .018);
+  for (const side of [-1, 1]) d = smoothUnion(d, ellipsoid(x, y, z, -.025, 1.50, side * .108, .061, .12, .047, -.2), .018);
   return d;
 }
 
