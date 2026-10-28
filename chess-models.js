@@ -260,13 +260,13 @@ export function buildChessPieces({ board, ivory, amberBase, obsidian, whiteTrim,
   function curve(points,radius,material,parent){const line=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));return add(new THREE.TubeGeometry(line,40,radius,8,false),material,parent);}
   function piece(type,column,row,white) {
     const p=new THREE.Group();p.name=`${white?'ivory':'obsidian'}-${type}-${column}`;p.position.set(column-3.5,.12,row-3.5);board.add(p);
-    const material=white?ivory:obsidian,trim=white?whiteTrim:blackTrim,glow=white?whiteGlow:blackGlow;
+    const material=white?ivory:obsidian,trim=white?ivory:blackTrim,glow=white?whiteGlow:blackGlow;
     disk(p,.98,.002,shadowMap,'#000000',.74);
     // Light stays inside the glass pedestal. The matte board has no specular reflection or halo decals.
-    add(shapes.base,white?amberBase:obsidian,p);ring(.365,.004,.061,trim,p);ring(.333,.010,.142,trim,p);
+    add(shapes.base,white?amberBase:obsidian,p);ring(.365,.004,.061,white?whiteTrim:trim,p);ring(.333,.010,.142,white?whiteTrim:trim,p);
     if(white){
-      ring(.266,.006,.104,trim,p);ring(.18,.009,.115,whiteTrim,p);
-      const core=ball(.12,whiteGlow,p,0,.084,0);core.scale.y=.022;
+      ring(.266,.004,.104,whiteGlow,p);ring(.18,.003,.115,whiteTrim,p);
+      // Fine trapped-light filaments, rather than a broad opaque luminous disc.
       for(let j=0;j<3;j++){
         const points=[];for(let i=0;i<=20;i++){const a=i/20*Math.PI*2,r=.14+j*.057;points.push([Math.cos(a)*r,.075+Math.sin(a*3+j)*.025,Math.sin(a)*r]);}
         curve(points,.0018,whiteTrim,p);

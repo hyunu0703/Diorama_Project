@@ -36,8 +36,8 @@ function inclusions(material, day) {
           float star=(1.0-smoothstep(.025,.13,length(f-center)))*step(.87,gemHash(cell+83.0));
           ${day ? `
           float cloud=smoothstep(.47,.78,mist);
-          light+=mix(vec3(.022,.065,.12),vec3(.23,.27,.28),cloud)*.16;
-          light+=vec3(1.0,.76,.43)*star*.85;
+          light+=mix(vec3(.022,.065,.12),vec3(.23,.27,.28),cloud)*.012;
+          light+=vec3(1.0,.76,.43)*star*.55;
           ` : `
           float nebula=smoothstep(.36,.79,mist);
           light+=mix(vec3(.001,.006,.019),vec3(.025,.009,.052),nebula)*.20;
@@ -50,21 +50,25 @@ function inclusions(material, day) {
       totalEmissiveRadiance += gemInterior(gemPosition, normalize(gemView));
     `);
   };
-  material.customProgramCacheKey = () => `celestial-gem-${day ? 'day' : 'night'}-v2`;
+  material.customProgramCacheKey = () => `celestial-gem-${day ? 'day-clear-v3' : 'night-v2'}`;
   return material;
 }
 
 export function createGemMaterials() {
   const common = { metalness:0, roughness:.045, clearcoat:1, clearcoatRoughness:.035,
     ior:1.54, specularIntensity:1, envMapIntensity:1.15 };
-  const ivory = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#fff6e8',
-    transmission:.80, thickness:.42, attenuationColor:'#ffe8bc', attenuationDistance:1.8}), true);
+  // Clear body: no emissive cloud veil or forced transmission blur. Preserve a sharp
+  // refracted interior and let dielectric edge reflections describe the silhouette.
+  const ivory = new THREE.MeshPhysicalMaterial({...common, color:'#ffffff',
+    transmission:1, roughness:.012, thickness:.28, ior:1.50,
+    attenuationColor:'#f5fbff', attenuationDistance:12,
+    clearcoat:.25, clearcoatRoughness:.015, envMapIntensity:.85});
   const obsidian = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#101b3e',
     transmission:.62, thickness:.78, ior:1.56, attenuationColor:'#232353', attenuationDistance:.28}), false);
-  const amberBase = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#fff6df',
-    transmission:.94, thickness:.28, attenuationColor:'#ffd28b', attenuationDistance:.8}), true);
-  const whiteTrim = new THREE.MeshPhysicalMaterial({...common, color:'#fff1ce', transmission:.65,
-    thickness:.08, emissive:'#ffcb78', emissiveIntensity:.08});
+  const amberBase = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#fffaf0',
+    transmission:.98, thickness:.22, attenuationColor:'#ffe2ac', attenuationDistance:1.2}), true);
+  const whiteTrim = new THREE.MeshPhysicalMaterial({...common, color:'#fff0ce', transmission:.95,
+    thickness:.06, emissive:'#ffbd54', emissiveIntensity:.16});
   const blackTrim = new THREE.MeshPhysicalMaterial({...common, color:'#132e68', transmission:.55,
     thickness:.10, emissive:'#2777e5', emissiveIntensity:.12});
   return {ivory,obsidian,amberBase,whiteTrim,blackTrim};
