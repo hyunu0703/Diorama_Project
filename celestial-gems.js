@@ -37,7 +37,7 @@ function inclusions(material, day) {
           ${day ? `
           float cloud=smoothstep(.47,.78,mist);
           float pedestal=exp(-max(p.y,0.0)*5.0);
-          light+=vec3(1.0,.68,.27)*(0.018+pedestal*(.065+.10*cloud));
+          light+=vec3(1.0,.84,.58)*(0.065+pedestal*(.12+.12*cloud));
           light+=vec3(1.0,.79,.43)*star*(1.0+3.0*exp(-max(p.y,0.0)*5.0));
           ` : `
           float nebula=smoothstep(.36,.79,mist);
@@ -49,6 +49,8 @@ function inclusions(material, day) {
       }
     `).replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
       totalEmissiveRadiance += gemInterior(gemPosition, normalize(gemView)) * ${day ? '1.0' : '.55'};
+      float gemEdge=pow(1.0-clamp(dot(normal,normalize(vViewPosition)),0.0,1.0),3.0);
+      totalEmissiveRadiance += ${day ? 'vec3(1.0,.90,.72)*(.035+.18*gemEdge)' : 'vec3(.025,.20,.70)*(.012+.24*gemEdge)'};
     `);
   };
   material.customProgramCacheKey = () => `celestial-reference-${day ? 'ivory-volume-v2' : 'obsidian-soft-v2'}`;
