@@ -61,10 +61,23 @@ room.clear();
 // Keep the blurred gallery as the background, but light surfaces with a captured HDR studio.
 // The HDR's bright white softboxes provide real view-dependent glass reflections.
 new RGBELoader().load('./assets/studio_small_09_1k.hdr', hdr => {
+  hdr.mapping = THREE.EquirectangularReflectionMapping;
+  const reflectionStudio = new THREE.Scene();
+  reflectionStudio.background = hdr;
+  const softboxMaterial = new THREE.MeshBasicMaterial({color:new THREE.Color(1,1,1).multiplyScalar(18),side:THREE.DoubleSide});
+  const softboxGeometry = new THREE.PlaneGeometry(1.2,5);
+  for(const position of [[6,-2,6],[-6,-2,-6],[-5,4,6]]) {
+    const softbox = new THREE.Mesh(softboxGeometry,softboxMaterial);
+    softbox.position.set(...position);softbox.lookAt(0,0,0);reflectionStudio.add(softbox);
+  }
+  const reflectionCapture = new THREE.WebGLCubeRenderTarget(512,{type:THREE.HalfFloatType});
+  const reflectionCamera = new THREE.CubeCamera(.1,100,reflectionCapture);
+  reflectionCamera.update(renderer,reflectionStudio);
   const generator = new THREE.PMREMGenerator(renderer);
-  const studio = generator.fromEquirectangular(hdr);
+  const studio = generator.fromCubemap(reflectionCapture.texture);
   scene.environment = studio.texture;
-  scene.environmentRotation.y = .65;
+  scene.environmentRotation.y = 0;
+  reflectionCapture.dispose();softboxGeometry.dispose();softboxMaterial.dispose();
   hdr.dispose();
   generator.dispose();
 }, undefined, error => console.error('Studio HDR could not load; gallery lighting retained.', error));
