@@ -95,9 +95,13 @@ void main(){
     vec2 drift=vec2(fogTime*.035,-fogTime*.022);
     float cloud=.42+.4*noise(p.xz*.72+drift)+.18*noise(p.xz*1.8-drift);
     float day=smoothstep(-1.15,1.15,p.z);
-    float density=surround*height*cloud*mix(1.2,.43,day);
+    // Day mist stays thin over the playing area and disperses beyond the rim.
+    float daySurround=mix(.018,.48,smoothstep(3.5,5.8,edge))
+      *exp(-pow(max(edge-5.,0.)/3.,2.));
+    surround=mix(surround,daySurround,day);
+    float density=surround*height*cloud*mix(1.2,.2,day);
     float alpha=1.-exp(-density*stepLength);
-    mist+=transmittance*alpha*mix(vec3(.0003,.0004,.0007),vec3(.86,.91,1.),day);
+    mist+=transmittance*alpha*mix(vec3(.0003,.0004,.0007),vec3(.34,.36,.39),day);
     transmittance*=1.-alpha;
   }
   float haze=1.-transmittance;
