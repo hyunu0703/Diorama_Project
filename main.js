@@ -62,33 +62,14 @@ scene.add(chassis);
 const metal = new THREE.MeshStandardMaterial({color:0x68727e,metalness:.85,roughness:.23});
 const panel = new THREE.MeshStandardMaterial({color:0xd4d7d9,metalness:.55,roughness:.38,side:THREE.DoubleSide});
 const dark = new THREE.MeshStandardMaterial({color:0x262a2e,metalness:.45,roughness:.45});
-// Untinted thin glass: preserve the sharp scene behind it and reflect white softboxes.
-// Fresnel changes with the view instead of covering the entire pane in gray.
-const glass = new THREE.ShaderMaterial({
- transparent:true, depthWrite:false, side:THREE.DoubleSide,
- vertexShader:`
- varying vec3 worldPosition;
- varying vec3 worldNormal;
- void main(){
-   vec4 world=modelMatrix*vec4(position,1.0);
-   worldPosition=world.xyz;
-   worldNormal=normalize(mat3(modelMatrix)*normal);
-   gl_Position=projectionMatrix*viewMatrix*world;
- }`,
- fragmentShader:`
- varying vec3 worldPosition;
- varying vec3 worldNormal;
- void main(){
-   vec3 v=normalize(cameraPosition-worldPosition);
-   vec3 n=normalize(worldNormal)*(gl_FrontFacing?1.0:-1.0);
-   float facing=clamp(dot(n,v),0.0,1.0);
-   float fresnel=0.04+0.96*pow(1.0-facing,5.0);
-   vec3 reflected=reflect(-v,n);
-   float softbox=pow(max(dot(reflected,normalize(vec3(-0.45,0.9,-0.6))),0.0),85.0);
-   float strip=pow(max(dot(reflected,normalize(vec3(0.7,0.5,0.3))),0.0),160.0);
-   float alpha=clamp(fresnel*0.22+softbox*0.38+strip*0.26,0.0,0.48);
-   gl_FragColor=vec4(vec3(1.0),alpha);
- }`
+// Low-iron optical glass: physical environment reflections and sharp transmission.
+const glass = new THREE.MeshPhysicalMaterial({
+ color:0xffffff, metalness:0, roughness:0.002,
+ transmission:1, thickness:0.003, ior:1.52,
+ attenuationColor:0xffffff, attenuationDistance:Infinity,
+ specularIntensity:0.8, specularColor:0xffffff,
+ envMapIntensity:0.7, clearcoat:0, dispersion:0,
+ transparent:false, opacity:1, side:THREE.DoubleSide
 });
 function caseBox(w,h,d,x,y,z,material=metal){
   const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
@@ -190,3 +171,4 @@ renderer.setAnimationLoop(time => {
   updateCamera();
   renderer.render(scene, camera);
 });
+
