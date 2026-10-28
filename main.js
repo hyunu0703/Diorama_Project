@@ -1,4 +1,5 @@
 import * as THREE from './three.module.js';
+import { RGBELoader } from './assets/RGBELoader.js';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 200);
@@ -6,6 +7,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1;
 document.querySelector('#world').appendChild(renderer.domElement);
 
 // Bake an enclosing gallery into a background material, independent of future foreground objects.
@@ -56,6 +58,17 @@ pmrem.dispose();
 resources.forEach(resource => resource.dispose());
 room.clear();
 
+// Keep the blurred gallery as the background, but light surfaces with a captured HDR studio.
+// The HDR's bright white softboxes provide real view-dependent glass reflections.
+new RGBELoader().load('./assets/studio_small_09_1k.hdr', hdr => {
+  const generator = new THREE.PMREMGenerator(renderer);
+  const studio = generator.fromEquirectangular(hdr);
+  scene.environment = studio.texture;
+  scene.environmentRotation.y = .65;
+  hdr.dispose();
+  generator.dispose();
+}, undefined, error => console.error('Studio HDR could not load; gallery lighting retained.', error));
+
 // Empty panoramic chassis: only shell, glass, fasteners and feet. No components.
 const chassis = new THREE.Group();
 scene.add(chassis);
@@ -67,9 +80,9 @@ const glass = new THREE.MeshPhysicalMaterial({
  color:0xffffff, metalness:0, roughness:0.002,
  transmission:1, thickness:0.003, ior:1.52,
  attenuationColor:0xffffff, attenuationDistance:Infinity,
- specularIntensity:0.8, specularColor:0xffffff,
- envMapIntensity:0.7, clearcoat:0, dispersion:0,
- transparent:false, opacity:1, side:THREE.DoubleSide
+ specularIntensity:1, specularColor:0xffffff,
+ envMapIntensity:1, clearcoat:0, dispersion:0,
+ transparent:false, opacity:1, side:THREE.FrontSide
 });
 function caseBox(w,h,d,x,y,z,material=metal){
   const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
@@ -110,9 +123,9 @@ for(const y of [-1.91,1.91])for(const x of [-1.15,1.15]){
 }
 const power=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.012,24),dark);
 power.rotation.x=Math.PI/2;power.position.set(-.96,-1.94,D/2+.045);chassis.add(power);
-scene.add(new THREE.HemisphereLight(0xffffff,0x858a91,2));
-const keyLight=new THREE.DirectionalLight(0xffffff,3.5);keyLight.position.set(4,7,5);scene.add(keyLight);
-const rimLight=new THREE.DirectionalLight(0xdbeaff,2);rimLight.position.set(-4,3,-3);scene.add(rimLight);
+scene.add(new THREE.HemisphereLight(0xffffff,0x858a91,.35));
+const keyLight=new THREE.DirectionalLight(0xffffff,1.4);keyLight.position.set(4,7,5);scene.add(keyLight);
+const rimLight=new THREE.DirectionalLight(0xffffff,.8);rimLight.position.set(-4,3,-3);scene.add(rimLight);
 
 let angle = Math.PI-.82, elevation = .26, distance = 10.5, targetDistance = 10.5, drag = null;
 const target=new THREE.Vector3();
