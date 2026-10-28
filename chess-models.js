@@ -259,7 +259,8 @@ export function buildChessPieces({ board, ivory, amberBase, obsidian, whiteTrim,
       mane.scale.z=2.25;
       ring(.215,.009,.36,trim,p);
     }
-    if(white)p.rotation.y=Math.PI;
+    if(type==='knight')p.rotation.y=column<4?Math.PI:0;
+    else if(white)p.rotation.y=Math.PI;
     pieces.push(p);return p;
   }
   const order=['rook','knight','bishop','queen','king','bishop','knight','rook'];
