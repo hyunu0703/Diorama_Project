@@ -31,7 +31,6 @@ scene.add(new THREE.HemisphereLight('#fff4de','#7c6659',.22));
 const key=new THREE.DirectionalLight('#ffebce',1.55);key.position.set(-4,9,-3);key.castShadow=true;key.shadow.mapSize.set(2048,2048);Object.assign(key.shadow.camera,{left:-7,right:7,top:7,bottom:-7,near:.1,far:30});key.shadow.normalBias=.008;key.shadow.bias=-.0001;key.shadow.radius=5;key.shadow.blurSamples=12;scene.add(key);
 const fill=new THREE.DirectionalLight('#80baff',.42);fill.position.set(5,6,-6);scene.add(fill);
 const rim=new THREE.DirectionalLight('#ffe6bd',.8);rim.position.set(-3,4,8);scene.add(rim);
-const softKey=new THREE.SpotLight('#ffe8c9',30,35,Math.PI/3,.95,2);softKey.position.set(-5,6,-7);softKey.target.position.set(-1,0,-2);scene.add(softKey,softKey.target);
 const board=new THREE.Group();scene.add(board);
 function mesh(geo,mat,parent,x=0,y=0,z=0){const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
 const frame=new THREE.MeshPhysicalMaterial({color:'#171719',metalness:0,roughness:1,clearcoat:0,specularIntensity:0,envMapIntensity:0});mesh(new THREE.BoxGeometry(8.42,.4,8.42),frame,board,0,-.13,0);
@@ -45,10 +44,7 @@ function radialTexture(inner,outer){const c=document.createElement('canvas');c.w
 const shadowMap=radialTexture('rgba(0,0,0,.55)','rgba(0,0,0,0)'),poolMap=radialTexture('rgba(255,255,255,.6)','rgba(255,255,255,0)');
 function disk(parent,size,y,map,color,opacity,additive=false){const m=new THREE.Mesh(new THREE.PlaneGeometry(size,size),new THREE.MeshBasicMaterial({map,color,transparent:true,opacity,depthWrite:false,blending:additive?THREE.AdditiveBlending:THREE.NormalBlending}));m.rotation.x=-Math.PI/2;m.position.y=y;parent.add(m);return m;}
 disk(scene,12,-.355,shadowMap,'#241810',.8);
-for(let i=0;i<8;i++){const p=disk(scene,2.6,-.345,poolMap,'#ffc481',.65,true);p.position.set(i-3.5,-.345,4.6);p.scale.set(.6,1.35,1);const q=disk(scene,2.1,-.344,poolMap,'#ffddb1',.52,true);q.position.set(4.55,-.344,i-3.5);}
 const {pieces,shapes}=buildChessPieces({board,ivory,amberBase,obsidian,whiteTrim,blackTrim,whiteGlow,blackGlow,shadowMap,poolMap,disk,random});
-// Broad local bounce influences glass and floor, with no specular response from the board.
-for(const[x,z,color,intensity]of[[-2.7,3.1,'#ffbf62',2.5],[2.7,3.1,'#ffbf62',2.5],[-2.7,-3.1,'#268fff',.8],[2.7,-3.1,'#268fff',.8]]){const light=new THREE.PointLight(color,intensity,4,2);light.position.set(x,.48,z);scene.add(light);}
 // Controlled studio reflections prevent the sky artwork from striping the sculptures.
 for(const material of[ivory,amberBase,obsidian,whiteTrim,blackTrim]){material.envMap=environment.texture;material.needsUpdate=true;}
 document.body.dataset.reflections='ready';
