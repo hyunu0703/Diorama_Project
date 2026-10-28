@@ -266,7 +266,7 @@ export function buildChessPieces({ board, ivory, amberBase, obsidian, whiteTrim,
     add(shapes.base,white?amberBase:obsidian,p);ring(.365,.004,.061,trim,p);ring(.333,.010,.142,trim,p);
     if(white){
       ring(.266,.006,.104,trim,p);ring(.18,.009,.115,whiteTrim,p);
-      const core=ball(.10,whiteTrim,p,0,.084,0);core.scale.y=.022;
+      const core=ball(.12,whiteGlow,p,0,.084,0);core.scale.y=.022;
       for(let j=0;j<3;j++){
         const points=[];for(let i=0;i<=20;i++){const a=i/20*Math.PI*2,r=.14+j*.057;points.push([Math.cos(a)*r,.075+Math.sin(a*3+j)*.025,Math.sin(a)*r]);}
         curve(points,.0018,whiteTrim,p);
