@@ -171,6 +171,7 @@ export function buildChessPieces({ board, ivory, amberBase, obsidian, whiteTrim,
     add(shapes.base,white?amberBase:obsidian,p);ring(.365,.009,.061,glow,p);ring(.333,.010,.142,trim,p);
     if(white){
       ring(.266,.013,.104,glow,p);ring(.18,.009,.115,whiteTrim,p);
+      const core=ball(.16,whiteGlow,p,0,.084,0);core.scale.y=.022;
       for(let j=0;j<3;j++){
         const points=[];for(let i=0;i<=20;i++){const a=i/20*Math.PI*2,r=.14+j*.057;points.push([Math.cos(a)*r,.075+Math.sin(a*3+j)*.025,Math.sin(a)*r]);}
         curve(points,.0035,whiteGlow,p);
@@ -178,8 +179,8 @@ export function buildChessPieces({ board, ivory, amberBase, obsidian, whiteTrim,
     }
     const positions=[];for(let i=0;i<40;i++){const a=random()*Math.PI*2,r=.15+random()*.20;positions.push(Math.cos(a)*r,.10+random()*.05,Math.sin(a)*r);}
     const glints=new THREE.BufferGeometry();glints.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
-    const color=new THREE.Color(white?'#ffe7aa':'#29a5ff').multiplyScalar(white?2.4:2);
-    p.add(new THREE.Points(glints,new THREE.PointsMaterial({color,size:.016,map:poolMap,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending})));
+    const color=new THREE.Color(white?'#ffd48a':'#29a5ff').multiplyScalar(white?4:2.8);
+    p.add(new THREE.Points(glints,new THREE.PointsMaterial({color,size:white?.027:.022,map:poolMap,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending})));
     if(type==='pawn') {add(shapes.pawn,material,p);ball(.205,material,p,0,.867,0);ring(.173,.008,.663,trim,p);}
     if(type==='king') {add(shapes.king,material,p);ring(.19,.008,1.18,trim,p);ball(.121,material,p,0,1.37,0);add(shapes.kingCross,material,p);}
     if(type==='queen') {add(shapes.queen,material,p);add(shapes.queenCrown,material,p);ring(.19,.008,1.15,trim,p);for(let i=0;i<8;i++){const a=i*Math.PI/4;ball(.031,material,p,Math.cos(a)*.258,1.518,Math.sin(a)*.258);}ball(.087,material,p,0,1.53,0);ball(.038,material,p,0,1.64,0);}
