@@ -66,7 +66,8 @@ export function createGemMaterials() {
   const obsidian = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#101b3e',
     transmission:.62, thickness:.78, ior:1.56, attenuationColor:'#232353', attenuationDistance:.28}), false);
   const amberBase = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#fffaf0',
-    transmission:.98, thickness:.22, attenuationColor:'#ffe2ac', attenuationDistance:1.2}), true);
+    transmission:.98, thickness:.22, attenuationColor:'#ffe2ac', attenuationDistance:1.2,
+    emissive:'#ffba50', emissiveIntensity:.28}), true);
   const whiteTrim = new THREE.MeshPhysicalMaterial({...common, color:'#fff0ce', transmission:.95,
     thickness:.06, emissive:'#ffbd54', emissiveIntensity:.16});
   const blackTrim = new THREE.MeshPhysicalMaterial({...common, color:'#132e68', transmission:.55,
