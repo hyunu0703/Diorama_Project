@@ -17,7 +17,7 @@ const blackGlow=new THREE.MeshBasicMaterial({color:new THREE.Color('#168dff').mu
 // Environment reflection cards supply broad photographic highlights.
 const pmrem=new THREE.PMREMGenerator(renderer),studio=new THREE.Scene();studio.background=new THREE.Color('#010102');
 function card(w,h,x,y,z,color,intensity){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:new THREE.Color(color).multiplyScalar(intensity),side:THREE.DoubleSide}));m.position.set(x,y,z);m.lookAt(0,0,0);studio.add(m);}
-card(2.4,5,-3,7,5,'#fff0d9',3);card(.28,3,4,3,-1,'#b9c9df',1.1);
+card(4,5,-3,7,5,'#fff0d9',4);card(3,4,3,3,5,'#eef2ff',2);card(.28,3,4,3,-1,'#b9c9df',1.1);
 let environment=pmrem.fromScene(studio,.025);scene.environment=environment.texture;scene.environmentIntensity=.12;document.body.dataset.environment='ready';
 // Dark matte stage; the light stays attached to the board's day side.
 const plaster=document.createElement('canvas');plaster.width=plaster.height=512;const pc=plaster.getContext('2d'),pixels=pc.createImageData(512,512);
