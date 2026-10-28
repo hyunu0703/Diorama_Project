@@ -1,1 +1,1 @@
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}#world{position:fixed;inset:0}canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}canvas.dragging{cursor:grabbing}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#e6e2db}#world{position:fixed;inset:0}canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}canvas.dragging{cursor:grabbing}
