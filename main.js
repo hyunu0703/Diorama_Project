@@ -56,21 +56,72 @@ for(const material of[ivory,ivoryTop,amberBase,obsidian,whiteTrim,blackTrim]){ma
 document.body.dataset.reflections='ready';
 // Linear HDR scene -> highlight bloom -> filmic display transform.
 const target=new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType,depthBuffer:true}),blurA=new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType,depthBuffer:false}),blurB=blurA.clone();
+// Depth-aware atmospheric post effect: no fog meshes, sprites, or particles.
+target.depthTexture=new THREE.DepthTexture(1,1,THREE.UnsignedIntType);
 const post=new THREE.Scene(),postCamera=new THREE.OrthographicCamera(-1,1,1,-1,0,1),quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2));post.add(quad);
 const vertexShader='varying vec2 uv0;void main(){uv0=uv;gl_Position=vec4(position.xy,0.,1.);}';
 const blurMaterial=new THREE.ShaderMaterial({uniforms:{source:{value:target.texture},stepUV:{value:new THREE.Vector2()},threshold:{value:1}},vertexShader,fragmentShader:`varying vec2 uv0;uniform sampler2D source;uniform vec2 stepUV;uniform float threshold;vec3 tap(vec2 uv){vec3 c=texture2D(source,uv).rgb;return c*max(0.,1.-threshold/max(max(c.r,c.g),max(c.b,.0001)));}void main(){vec3 c=tap(uv0)*.227027;c+=(tap(uv0+stepUV*1.384615)+tap(uv0-stepUV*1.384615))*.316216;c+=(tap(uv0+stepUV*3.230769)+tap(uv0-stepUV*3.230769))*.070270;gl_FragColor=vec4(c,1.);}`,depthTest:false,depthWrite:false});
 const finalMaterial=new THREE.ShaderMaterial({uniforms:{source:{value:target.texture},bloom:{value:blurB.texture}},vertexShader,fragmentShader:`varying vec2 uv0;uniform sampler2D source;uniform sampler2D bloom;void main(){vec3 c=texture2D(source,uv0).rgb+texture2D(bloom,uv0).rgb*.055;c*=.96;c=clamp((c*(2.51*c+.03))/(c*(2.43*c+.59)+.14),0.,1.);c=mix(c*12.92,1.055*pow(c,vec3(1./2.4))-.055,step(vec3(.0031308),c));float v=1.-.15*pow(length((uv0-.5)*1.2),2.);gl_FragColor=vec4(c*v,1.);}`,depthTest:false,depthWrite:false});
+Object.assign(finalMaterial.uniforms,{
+  sceneDepth:{value:target.depthTexture},inverseProjection:{value:camera.projectionMatrixInverse},
+  cameraWorld:{value:camera.matrixWorld},eye:{value:camera.position},
+  pixel:{value:new THREE.Vector2()},fogTime:{value:0}
+});
+finalMaterial.fragmentShader=`
+varying vec2 uv0;
+uniform sampler2D source,bloom,sceneDepth;
+uniform mat4 inverseProjection,cameraWorld;
+uniform vec3 eye;
+uniform vec2 pixel;
+uniform float fogTime;
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
+void main(){
+  float depth=texture2D(sceneDepth,uv0).x;
+  vec4 view=inverseProjection*vec4(uv0*2.-1.,depth*2.-1.,1.);
+  vec3 endpoint=(cameraWorld*vec4(view.xyz/view.w,1.)).xyz;
+  vec3 ray=normalize(endpoint-eye);
+  float lengthToSurface=min(length(endpoint-eye),55.);
+  // Integrate only the shallow atmosphere around the board, up to visible geometry.
+  float enter=max(0.,(2.4-eye.y)/ray.y);
+  float leave=min(lengthToSurface,(-.36-eye.y)/ray.y);
+  float stepLength=max(0.,leave-enter)/20.;
+  vec3 mist=vec3(0.);float transmittance=1.;
+  for(int i=0;i<20;i++){
+    vec3 p=eye+ray*(enter+(float(i)+.5)*stepLength);
+    float edge=pow(pow(abs(p.x),4.)+pow(abs(p.z),4.),.25);
+    float surround=mix(.22,1.,smoothstep(2.3,4.7,edge))*(1.-smoothstep(4.8,8.5,edge+noise(p.xz*.55)*1.2));
+    float height=exp(-pow((p.y-.5)/1.05,2.));
+    vec2 drift=vec2(fogTime*.035,-fogTime*.022);
+    float cloud=.42+.4*noise(p.xz*.72+drift)+.18*noise(p.xz*1.8-drift);
+    float day=smoothstep(-1.15,1.15,p.z);
+    float density=surround*height*cloud*mix(1.2,.43,day);
+    float alpha=1.-exp(-density*stepLength);
+    mist+=transmittance*alpha*mix(vec3(.0003,.0004,.0007),vec3(.86,.91,1.),day);
+    transmittance*=1.-alpha;
+  }
+  float haze=1.-transmittance;
+  vec3 sharp=texture2D(source,uv0).rgb;
+  vec3 soft=(texture2D(source,uv0+pixel*vec2(3,0)).rgb+texture2D(source,uv0-pixel*vec2(3,0)).rgb+texture2D(source,uv0+pixel*vec2(0,3)).rgb+texture2D(source,uv0-pixel*vec2(0,3)).rgb)*.25;
+  vec3 c=(mix(sharp,soft,haze*.72)+texture2D(bloom,uv0).rgb*.055)*transmittance+mist;
+  c*=.96;c=clamp((c*(2.51*c+.03))/(c*(2.43*c+.59)+.14),0.,1.);
+  c=mix(c*12.92,1.055*pow(c,vec3(1./2.4))-.055,step(vec3(.0031308),c));
+  float v=1.-.15*pow(length((uv0-.5)*1.2),2.);
+  gl_FragColor=vec4(c*v,1.);
+}`;
 let azimuth=-.63,elevation=.86,distance=19.4,goalDistance=19.4,drag=null;const lookAt=new THREE.Vector3(0,-.55,0),pointers=new Map();let pinch=null;
 function fit(){return innerWidth/innerHeight<1?1/(innerWidth/innerHeight)**1.05:1;}
-function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);const s=renderer.getDrawingBufferSize(new THREE.Vector2());target.setSize(s.x,s.y);blurA.setSize(Math.max(1,Math.round(s.x/3)),Math.max(1,Math.round(s.y/3)));blurB.setSize(blurA.width,blurA.height);}resize();addEventListener('resize',resize);
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);const s=renderer.getDrawingBufferSize(new THREE.Vector2());target.setSize(s.x,s.y);finalMaterial.uniforms.pixel.value.set(1/s.x,1/s.y);blurA.setSize(Math.max(1,Math.round(s.x/3)),Math.max(1,Math.round(s.y/3)));blurB.setSize(blurA.width,blurA.height);}resize();addEventListener('resize',resize);
 function reset(){azimuth=-.63;elevation=.86;goalDistance=19.4;lookAt.set(0,-.55,0);}document.querySelector('#reset').addEventListener('click',reset);canvas.addEventListener('dblclick',reset);canvas.addEventListener('contextmenu',e=>e.preventDefault());
 canvas.addEventListener('pointerdown',e=>{if(e.button!==0&&e.button!==2)return;canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});drag={id:e.pointerId,x:e.clientX,y:e.clientY,pan:e.button===2||e.shiftKey};canvas.classList.add('dragging');if(pointers.size===2){const[a,b]=[...pointers.values()];pinch={length:Math.hypot(a.x-b.x,a.y-b.y),distance:goalDistance};}});
 canvas.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===2&&pinch){const[a,b]=[...pointers.values()];goalDistance=THREE.MathUtils.clamp(pinch.distance*pinch.length/Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),11,30);return;}if(!drag||drag.id!==e.pointerId)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(drag.pan){const right=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,0),up=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1),scale=distance*.0008;lookAt.addScaledVector(right,-dx*scale).addScaledVector(up,dy*scale);}else{azimuth-=dx*.005;elevation=THREE.MathUtils.clamp(elevation+dy*.004,.25,1.45);}drag.x=e.clientX;drag.y=e.clientY;});
 function release(e){pointers.delete(e.pointerId);pinch=null;drag=null;canvas.classList.remove('dragging');if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);}for(const name of['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(name,release);
 canvas.addEventListener('wheel',e=>{e.preventDefault();goalDistance=THREE.MathUtils.clamp(goalDistance+e.deltaY*(e.deltaMode===1?.12:.012),11,30);},{passive:false});
 addEventListener('keydown',e=>{if(e.target.matches('button,input'))return;if(e.key.toLowerCase()==='r')reset();if(e.key==='ArrowLeft')azimuth-=.08;if(e.key==='ArrowRight')azimuth+=.08;if(e.key==='ArrowUp')elevation=Math.min(1.45,elevation+.06);if(e.key==='ArrowDown')elevation=Math.max(.25,elevation-.06);if(e.key==='+'||e.key==='=')goalDistance=Math.max(11,goalDistance-1);if(e.key==='-')goalDistance=Math.min(30,goalDistance+1);});
-let last=performance.now(),frames=0;renderer.setAnimationLoop(time=>{const dt=Math.min((time-last)/1000,.1);last=time;distance+=(goalDistance-distance)*(1-Math.exp(-10*dt));const r=distance*fit();camera.position.set(Math.sin(azimuth)*Math.cos(elevation)*r,Math.sin(elevation)*r,Math.cos(azimuth)*Math.cos(elevation)*r).add(lookAt);camera.lookAt(lookAt);renderer.setRenderTarget(target);renderer.render(scene,camera);quad.material=blurMaterial;blurMaterial.uniforms.source.value=target.texture;blurMaterial.uniforms.threshold.value=1.4;blurMaterial.uniforms.stepUV.value.set(1.5/blurA.width,0);renderer.setRenderTarget(blurA);renderer.render(post,postCamera);blurMaterial.uniforms.source.value=blurA.texture;blurMaterial.uniforms.threshold.value=0;blurMaterial.uniforms.stepUV.value.set(0,1.5/blurA.height);renderer.setRenderTarget(blurB);renderer.render(post,postCamera);quad.material=finalMaterial;renderer.setRenderTarget(null);renderer.render(post,postCamera);if(++frames>=3&&document.body.dataset.texture==='ready'&&document.body.dataset.reflections==='ready'){document.body.classList.add('ready');document.body.dataset.pieces=pieces.length;}});
+let last=performance.now(),frames=0;renderer.setAnimationLoop(time=>{const dt=Math.min((time-last)/1000,.1);last=time;distance+=(goalDistance-distance)*(1-Math.exp(-10*dt));const r=distance*fit();camera.position.set(Math.sin(azimuth)*Math.cos(elevation)*r,Math.sin(elevation)*r,Math.cos(azimuth)*Math.cos(elevation)*r).add(lookAt);camera.lookAt(lookAt);finalMaterial.uniforms.fogTime.value=time*.001;renderer.setRenderTarget(target);renderer.render(scene,camera);quad.material=blurMaterial;blurMaterial.uniforms.source.value=target.texture;blurMaterial.uniforms.threshold.value=1.4;blurMaterial.uniforms.stepUV.value.set(1.5/blurA.width,0);renderer.setRenderTarget(blurA);renderer.render(post,postCamera);blurMaterial.uniforms.source.value=blurA.texture;blurMaterial.uniforms.threshold.value=0;blurMaterial.uniforms.stepUV.value.set(0,1.5/blurA.height);renderer.setRenderTarget(blurB);renderer.render(post,postCamera);quad.material=finalMaterial;renderer.setRenderTarget(null);renderer.render(post,postCamera);if(++frames>=3&&document.body.dataset.texture==='ready'&&document.body.dataset.reflections==='ready'){document.body.classList.add('ready');document.body.dataset.pieces=pieces.length;}});
 canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();document.querySelector('#status').textContent='3D 화면 연결이 중단되었습니다. 새로고침해 주세요.';document.body.classList.remove('ready');});
+
+
 
 
 
