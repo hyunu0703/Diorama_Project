@@ -3,6 +3,17 @@ import { buildChessPieces } from './chess-models.js';
 import { createGemMaterials } from './celestial-gems.js';
 
 const scene=new THREE.Scene();scene.background=new THREE.Color('#050609');scene.fog=new THREE.FogExp2('#050609',.025);
+// Screen-filling sky backdrop; lighting, reflections and chess geometry stay independent.
+const skyBackground=new THREE.TextureLoader().load('./assets/day-night-sky.png',()=>{fitSkyBackground();document.body.dataset.sky='ready';},undefined,()=>{document.body.dataset.sky='error';});
+skyBackground.colorSpace=THREE.SRGBColorSpace;
+function fitSkyBackground(){
+  if(!skyBackground.image)return;
+  const imageAspect=skyBackground.image.width/skyBackground.image.height,viewAspect=innerWidth/innerHeight;
+  const x=Math.min(1,viewAspect/imageAspect),y=Math.min(1,imageAspect/viewAspect);
+  skyBackground.repeat.set(x,y);skyBackground.offset.set((1-x)/2,(1-y)/2);
+  scene.background=skyBackground;
+}
+addEventListener('resize',fitSkyBackground);
 const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,100);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
@@ -32,6 +43,20 @@ const plaster=document.createElement('canvas');plaster.width=plaster.height=512;
 for(let i=0;i<pixels.data.length;i+=4){const n=140+random()*35;pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=n;pixels.data[i+3]=255;}pc.putImageData(pixels,0,0);
 const bump=new THREE.CanvasTexture(plaster);bump.wrapS=bump.wrapT=THREE.RepeatWrapping;bump.repeat.set(26,26);
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(160,160),new THREE.MeshStandardMaterial({color:'#08090c',roughness:.91,bumpMap:bump,bumpScale:.025}));floor.rotation.x=-Math.PI/2;floor.position.y=-.37;floor.receiveShadow=true;scene.add(floor);
+// Project the same backdrop onto the existing stage while retaining its shadows.
+const skyResolution=new THREE.Vector2();
+floor.material.fog=false;
+floor.material.onBeforeCompile=shader=>{
+  shader.uniforms.skyBackdrop={value:skyBackground};
+  shader.uniforms.skyResolution={value:skyResolution};
+  shader.uniforms.skyRepeat={value:skyBackground.repeat};
+  shader.uniforms.skyOffset={value:skyBackground.offset};
+  shader.fragmentShader='uniform sampler2D skyBackdrop;uniform vec2 skyResolution;uniform vec2 skyRepeat;uniform vec2 skyOffset;\n'+shader.fragmentShader;
+  shader.fragmentShader=shader.fragmentShader.replace('#include <shadowmap_pars_fragment>','#include <shadowmap_pars_fragment>\n#include <shadowmask_pars_fragment>');
+  shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>','vec2 skyUV=gl_FragCoord.xy/skyResolution*skyRepeat+skyOffset;outgoingLight=texture2D(skyBackdrop,skyUV).rgb*mix(.68,1.,getShadowMask());\n#include <opaque_fragment>');
+};
+function resizeSkyStage(){renderer.getDrawingBufferSize(skyResolution);}
+resizeSkyStage();addEventListener('resize',resizeSkyStage);
 scene.add(new THREE.HemisphereLight('#c6cedc','#020204',.018));
 // A broad, feathered pool covers white's ranks and fades before black's back rank.
 const key=new THREE.SpotLight('#fff0dc',210,14,.76,.72,2);key.position.set(-3,7,5);key.target.position.set(0,0,2);key.castShadow=true;key.shadow.mapSize.set(2048,2048);Object.assign(key.shadow.camera,{near:.5,far:20});key.shadow.normalBias=.008;key.shadow.bias=-.0001;key.shadow.radius=3;key.shadow.blurSamples=8;scene.add(key,key.target);
