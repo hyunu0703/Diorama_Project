@@ -1,1 +1,1 @@
-https://computer-village.hyunu0703.chatgpt.site/
+https://twilight-edge.hyunu0703.chatgpt.site/
