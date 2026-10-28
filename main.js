@@ -16,11 +16,15 @@ const whiteGlow=new THREE.MeshBasicMaterial({color:new THREE.Color('#ffd28b').mu
 const blackGlow=new THREE.MeshBasicMaterial({color:new THREE.Color('#168dff').multiplyScalar(2),toneMapped:false});
 // Environment reflection cards supply broad photographic highlights.
 const pmrem=new THREE.PMREMGenerator(renderer),studio=new THREE.Scene();studio.background=new THREE.Color('#010102');
-function card(w,h,x,y,z,color,intensity){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:new THREE.Color(color).multiplyScalar(intensity),side:THREE.DoubleSide}));m.position.set(x,y,z);m.lookAt(0,0,0);studio.add(m);}
-card(4,5,-3,7,5,'#fff0d9',4);card(3,4,3,3,5,'#eef2ff',2);card(.28,3,4,3,-1,'#b9c9df',1.1);
-// Reflection cards affect only the pieces' environment; board and stage stay unchanged.
-card(2.8,4,-4,4,-5,'#197fff',6);card(.65,5,4,5,-4,'#78bcff',8);
-card(5,2,0,7,0,'#fff4df',3);
+const softbox=document.createElement('canvas');softbox.width=softbox.height=256;
+const sc=softbox.getContext('2d'),sg=sc.createRadialGradient(128,128,0,128,128,128);
+sg.addColorStop(0,'#ffffff');sg.addColorStop(.35,'#c4c4c4');sg.addColorStop(.7,'#353535');sg.addColorStop(1,'#000000');sc.fillStyle=sg;sc.fillRect(0,0,256,256);
+const softMap=new THREE.CanvasTexture(softbox);softMap.colorSpace=THREE.SRGBColorSpace;
+function card(w,h,x,y,z,color,intensity){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:softMap,color:new THREE.Color(color).multiplyScalar(intensity),side:THREE.DoubleSide}));m.position.set(x,y,z);m.lookAt(0,0,0);studio.add(m);}
+// Soft reflected light belongs to the pieces; stage lighting and board materials are untouched.
+card(7,7,-3,7,5,'#fff1dc',3);card(5,6,4,4,4,'#fff5e5',2);
+card(6,7,-4,5,-5,'#268cff',5);card(3,6,4,4,-4,'#78bdff',4);
+card(6,4,0,8,0,'#fff7e8',2.5);
 let environment=pmrem.fromScene(studio,.025);scene.environment=environment.texture;scene.environmentIntensity=.12;document.body.dataset.environment='ready';
 // Dark matte stage; the light stays attached to the board's day side.
 const plaster=document.createElement('canvas');plaster.width=plaster.height=512;const pc=plaster.getContext('2d'),pixels=pc.createImageData(512,512);

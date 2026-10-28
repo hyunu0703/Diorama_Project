@@ -88,100 +88,39 @@ export function implicitSurface(field, min, max, resolution) {
 }
 
 function createKnightField() {
-  // Three-view reference: flared lower neck, broad square muzzle and a V between the ears.
-  const profile = new THREE.Path();
-  profile.moveTo(-.355,.493);
-  profile.lineTo(.080,1.105);
-  profile.lineTo(-.120,1.080);
-  profile.lineTo(-.330,1.036);
-  profile.lineTo(-.410,1.025);
-  profile.lineTo(-.446,1.062);
-  profile.lineTo(-.461,1.122);
-  profile.quadraticCurveTo(-.468,1.146,-.447,1.170);
-  profile.lineTo(-.302,1.338);
-  profile.lineTo(-.272,1.398);
-  profile.lineTo(-.169,1.451);
-  profile.lineTo(-.083,1.462);
-  profile.lineTo(-.070,1.591);
-  profile.lineTo(-.020,1.584);
-  profile.quadraticCurveTo(.044,1.557,.095,1.490);
-  profile.lineTo(.187,1.431);
-  profile.lineTo(.226,1.349);
-  profile.quadraticCurveTo(.302,1.177,.326,.972);
-  profile.bezierCurveTo(.349,.817,.365,.663,.330,.574);
-  profile.quadraticCurveTo(.301,.488,.215,.481);
-  profile.lineTo(-.209,.481);
-  profile.closePath();
-  const outline = profile.getPoints(12);
-  const minX=-.65, maxX=.43, minY=.23, maxY=1.85, nx=192, ny=288;
-  const distances = new Float32Array((nx+1)*(ny+1));
-  function exactDistance(x,y) {
-    let distance=Infinity, inside=false;
-    for(let i=0,j=outline.length-1;i<outline.length;j=i++) {
-      const a=outline[j], b=outline[i], dx=b.x-a.x,dy=b.y-a.y;
-      const t=THREE.MathUtils.clamp(((x-a.x)*dx+(y-a.y)*dy)/(dx*dx+dy*dy||1),0,1);
-      distance=Math.min(distance,(x-a.x-t*dx)**2+(y-a.y-t*dy)**2);
-      if((a.y>y)!==(b.y>y)&&x<(b.x-a.x)*(y-a.y)/(b.y-a.y)+a.x)inside=!inside;
-    }
-    return Math.sqrt(distance)*(inside?-1:1);
-  }
-  for(let y=0;y<=ny;y++)for(let x=0;x<=nx;x++)distances[x+y*(nx+1)]=exactDistance(minX+(maxX-minX)*x/nx,minY+(maxY-minY)*y/ny);
-  // Smooth medial-axis creases while retaining the drawn silhouette and carved jaw.
-  const kernel=[1,4,6,4,1],scratch=new Float32Array(distances.length);
-  for(let pass=0;pass<3;pass++){
-    for(let y=0;y<=ny;y++)for(let x=0;x<=nx;x++){let sum=0;for(let k=-2;k<=2;k++)sum+=distances[THREE.MathUtils.clamp(x+k,0,nx)+y*(nx+1)]*kernel[k+2];scratch[x+y*(nx+1)]=sum/16;}
-    for(let y=0;y<=ny;y++)for(let x=0;x<=nx;x++){let sum=0;for(let k=-2;k<=2;k++)sum+=scratch[x+THREE.MathUtils.clamp(y+k,0,ny)*(nx+1)]*kernel[k+2];distances[x+y*(nx+1)]=sum/16;}
-  }
-  function distance2D(x,y) {
-    const gx=THREE.MathUtils.clamp((x-minX)/(maxX-minX)*nx,0,nx-.00001), gy=THREE.MathUtils.clamp((y-minY)/(maxY-minY)*ny,0,ny-.00001);
-    const ix=Math.floor(gx),iy=Math.floor(gy),tx=gx-ix,ty=gy-iy,a=ix+iy*(nx+1);
-    return THREE.MathUtils.lerp(THREE.MathUtils.lerp(distances[a],distances[a+1],tx),THREE.MathUtils.lerp(distances[a+nx+1],distances[a+nx+2],tx),ty);
-  }
-  const widths=[[.48,.319],[.62,.262],[.83,.178],[1.03,.127],[1.20,.145],[1.41,.157],[1.61,.148]];
+  // A fully rounded sculpture: a tapered bowed neck, cheek, muzzle and two ears.
   function body(x,y,z) {
-    const d=distance2D(x,y);
-    let halfWidth=widths[widths.length-1][1];
-    for(let i=1;i<widths.length;i++)if(y<=widths[i][0]){
-      const [a,wa]=widths[i-1],[b,wb]=widths[i];halfWidth=THREE.MathUtils.lerp(wa,wb,THREE.MathUtils.smoothstep(y,a,b));break;
+    const t=THREE.MathUtils.clamp((y-.49)/.88,0,1);
+    const cx=.025+.13*Math.sin(t*Math.PI)-.065*t;
+    const rx=.275-.15*t,rz=.265-.14*t;
+    const neck=(Math.hypot((x-cx)/rx,z/rz)-1)*Math.min(rx,rz);
+    let d=Math.max(neck,Math.max(.485-y,y-1.39));
+    d=smoothUnion(d,ellipsoid(x,y,z,-.095,1.345,0,.19,.22,.145,.38),.075);
+    d=smoothUnion(d,ellipsoid(x,y,z,-.292,1.233,0,.205,.105,.123,.53),.05);
+    d=smoothUnion(d,ellipsoid(x,y,z,-.405,1.172,0,.095,.078,.12,.35),.025);
+    d=smoothUnion(d,ellipsoid(x,y,z,-.105,1.235,0,.125,.135,.159,-.25),.045);
+    for(const side of[-1,1])d=smoothUnion(d,ellipsoid(x,y,z,-.006,1.525,side*.095,.044,.125,.042,-.15),.018);
+    // A narrow raised mane follows the back of the arched neck.
+    for(let i=0;i<9;i++){
+      const u=i/8,yy=.65+u*.76,xx=.27-.17*u+.025*Math.sin(u*Math.PI);
+      d=smoothUnion(d,ellipsoid(x,y,z,xx,yy,0,.065,.10,.095,-.2),.025);
     }
-    const muzzle=THREE.MathUtils.smoothstep(-x,.20,.43)*(1-THREE.MathUtils.smoothstep(y,1.21,1.38));
-    halfWidth=THREE.MathUtils.lerp(halfWidth,.189,muzzle);
-    halfWidth+=.012*THREE.MathUtils.clamp(-d/.20,0,1);
-    const bevel=.032,a=d+bevel,b=Math.abs(z)-halfWidth+bevel;
-    const sculpt=Math.min(Math.max(a,b),0)+Math.hypot(Math.max(a,0),Math.max(b,0))-bevel;
-    // A low, broad lip is visible from the front as well as in profile.
-    const qx=Math.abs(x+.443)-.024,qy=Math.abs(y-1.058)-.023,qz=Math.abs(z)-.183;
-    const lip=Math.min(Math.max(qx,qy,qz),0)+Math.hypot(Math.max(qx,0),Math.max(qy,0),Math.max(qz,0))-.008;
-    return smoothUnion(sculpt,lip,.008);
+    return d;
   }
-  function surfaceDepth(x,y) {
-    let a=0,b=.34;
-    for(let i=0;i<22;i++){const z=(a+b)/2;if(body(x,y,z)<0)a=z;else b=z;}
-    return (a+b)/2;
-  }
-  const eyes={x:-.210,y:1.350,z:surfaceDepth(-.210,1.350)};
-  const nostrils={x:-.435,y:1.144,z:surfaceDepth(-.435,1.144)};
-  const cuts=[];
-  function groove(points,radius){
-    for(const side of[-1,1])for(let i=1;i<points.length;i++){
-      const a=points[i-1],b=points[i];
-      cuts.push({a:[a[0],a[1],side*(surfaceDepth(...a)-.002)],b:[b[0],b[1],side*(surfaceDepth(...b)-.002)],radius});
-    }
-  }
-  groove([[-.455,1.083],[-.421,1.073],[-.366,1.083]],.0055);
-  function field(x,y,z) {
+  function surfaceDepth(x,y){let a=0,b=.36;for(let i=0;i<20;i++){const z=(a+b)/2;if(body(x,y,z)<0)a=z;else b=z;}return(a+b)/2;}
+  const eyes={x:-.166,y:1.372,z:surfaceDepth(-.166,1.372)};
+  const nostrils={x:-.420,y:1.204,z:surfaceDepth(-.420,1.204)};
+  function field(x,y,z){
     let d=body(x,y,z);
-    // A small crown notch separates the short ears; there are no extra horn-like blobs.
-    const earNotch=Math.max(Math.abs(z)-.152,1.460+.65*Math.abs(z)-y);
-    d=Math.max(d,-earNotch);
     for(const side of[-1,1]){
-      d=Math.max(d,-ellipsoid(x,y,z,eyes.x,eyes.y,side*(eyes.z-.002),.020,.013,.010));
-      d=Math.max(d,-ellipsoid(x,y,z,nostrils.x,nostrils.y,side*(nostrils.z-.002),.014,.012,.010));
-    }
-    for(const {a,b,radius} of cuts){
-      const vx=b[0]-a[0],vy=b[1]-a[1],vz=b[2]-a[2],px=x-a[0],py=y-a[1],pz=z-a[2];
-      const t=THREE.MathUtils.clamp((px*vx+py*vy+pz*vz)/(vx*vx+vy*vy+vz*vz),0,1);
-      d=Math.max(d,-(Math.hypot(px-t*vx,py-t*vy,pz-t*vz)-radius));
+      d=Math.max(d,-ellipsoid(x,y,z,eyes.x,eyes.y,side*(eyes.z-.004),.025,.019,.018));
+      d=Math.max(d,-ellipsoid(x,y,z,nostrils.x,nostrils.y,side*(nostrils.z-.003),.019,.014,.016,.3));
+      // Delicate mouth incision, curved cheek and shallow carved mane channels.
+      d=Math.max(d,-ellipsoid(x,y,z,-.411,1.148,side*.107,.075,.0045,.015,.2));
+      for(let i=0;i<7;i++){
+        const u=i/6,yy=.74+u*.60,xx=.275-.16*u;
+        d=Math.max(d,-ellipsoid(x,y,z,xx,yy,side*.08,.049,.009,.026,-.5));
+      }
     }
     return d;
   }
@@ -263,7 +202,7 @@ export function buildChessPieces({ board, ivory, ivoryTop, amberBase, obsidian, 
     const material=white?ivory:obsidian,top=white?ivoryTop:obsidian,trim=white?whiteTrim:blackTrim;
     disk(p,.98,.002,shadowMap,'#000000',.74);
     // Light stays inside the glass pedestal. The matte board has no specular reflection or halo decals.
-    add(shapes.base,white?amberBase:obsidian,p);ring(.365,.004,.061,white?whiteTrim:trim,p);ring(.333,.010,.142,white?whiteTrim:trim,p);
+    add(shapes.base,white?amberBase:obsidian,p);ring(.365,.004,.061,white?whiteTrim:trim,p);ring(.333,.005,.142,white?whiteTrim:trim,p);
     if(white){
       ring(.266,.004,.104,whiteGlow,p);ring(.18,.003,.115,whiteTrim,p);
       // Fine trapped-light filaments, rather than a broad opaque luminous disc.
@@ -275,14 +214,14 @@ export function buildChessPieces({ board, ivory, ivoryTop, amberBase, obsidian, 
     const positions=[];for(let i=0;i<40;i++){const a=random()*Math.PI*2,r=.15+random()*.20;positions.push(Math.cos(a)*r,.075+random()*.09,Math.sin(a)*r);}
     const glints=new THREE.BufferGeometry();glints.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
     const color=new THREE.Color(white?'#ffd48a':'#29a5ff').multiplyScalar(white?2.6:1.8);
-    p.add(new THREE.Points(glints,new THREE.PointsMaterial({color,size:white?.024:.018,map:poolMap,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending})));
+    p.add(new THREE.Points(glints,new THREE.PointsMaterial({color,size:white?.040:.027,map:poolMap,transparent:true,depthWrite:false,depthTest:false,blending:THREE.AdditiveBlending})));
     if(type==='pawn') {add(shapes.pawn,material,p);ball(.205,top,p,0,.867,0);ring(.173,.008,.663,trim,p);}
     if(type==='king') {add(shapes.king,material,p);ring(.19,.008,1.18,trim,p);ball(.121,top,p,0,1.37,0);add(shapes.kingCross,top,p);}
     if(type==='queen') {add(shapes.queen,material,p);add(shapes.queenCrown,top,p);ring(.19,.008,1.15,trim,p);for(let i=0;i<8;i++){const a=i*Math.PI/4;ball(.031,top,p,Math.cos(a)*.258,1.518,Math.sin(a)*.258);}ball(.087,top,p,0,1.53,0);ball(.038,top,p,0,1.64,0);}
     if(type==='bishop') {add(shapes.bishop,material,p);add(shapes.bishopHead,top,p);ring(.174,.009,.961,trim,p);ball(.042,top,p,0,1.58,0);}
     if(type==='rook') {add(shapes.rook,material,p);for(let i=0;i<6;i++){const battlement=add(shapes.rookBattlement,top,p);battlement.rotation.y=i*Math.PI/3;}ring(.274,.009,1.18,trim,p);}
     if(type==='knight') {
-      const carved=white?ivoryTop:obsidian;
+      const carved=white?ivory:obsidian;
       add(shapes.knightPlinth,carved,p);add(shapes.knight,carved,p);
       const {eyes,nostrils}=knightSculpture;
       for(const side of [-1,1]){

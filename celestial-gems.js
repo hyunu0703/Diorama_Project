@@ -8,14 +8,14 @@ function inclusions(material, day) {
     shader.fragmentShader = shader.fragmentShader.replace('#include <transmission_pars_fragment>',
       THREE.ShaderChunk.transmission_pars_fragment.replace(
         'return textureBicubic( transmissionSamplerMap, fragCoord.xy, lod );',
-        'return textureBicubic( transmissionSamplerMap, fragCoord.xy, max(lod, 4.6) );'));
+        'return textureBicubic( transmissionSamplerMap, fragCoord.xy, max(lod, 2.2) );'));
     shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>
       varying vec3 gemPosition;
       varying vec3 gemView;
     `).replace('#include <worldpos_vertex>', `#include <worldpos_vertex>
-      gemPosition = position;
+      gemPosition = (modelMatrix * vec4(position, 1.0)).xyz - vec3(0.0, 0.12, 0.0);
       vec3 gemWorld = (modelMatrix * vec4(position, 1.0)).xyz;
-      gemView = inverseTransformDirection(cameraPosition - gemWorld, modelMatrix);
+      gemView = cameraPosition - gemWorld;
     `);
     shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>
       varying vec3 gemPosition;
@@ -36,8 +36,9 @@ function inclusions(material, day) {
           float star=(1.0-smoothstep(.025,.13,length(f-center)))*step(.87,gemHash(cell+83.0));
           ${day ? `
           float cloud=smoothstep(.47,.78,mist);
-          light+=mix(vec3(.022,.065,.12),vec3(.23,.27,.28),cloud)*.012;
-          light+=vec3(1.0,.76,.43)*star*.55;
+          float pedestal=exp(-max(p.y,0.0)*5.0);
+          light+=vec3(1.0,.68,.27)*(0.018+pedestal*(.065+.10*cloud));
+          light+=vec3(1.0,.79,.43)*star*(1.0+3.0*exp(-max(p.y,0.0)*5.0));
           ` : `
           float nebula=smoothstep(.36,.79,mist);
           light+=mix(vec3(.001,.006,.019),vec3(.025,.009,.052),nebula)*.20;
@@ -47,10 +48,10 @@ function inclusions(material, day) {
         return light;
       }
     `).replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-      totalEmissiveRadiance += gemInterior(gemPosition, normalize(gemView)) * ${day ? '.65' : '.32'};
+      totalEmissiveRadiance += gemInterior(gemPosition, normalize(gemView)) * ${day ? '1.0' : '.55'};
     `);
   };
-  material.customProgramCacheKey = () => `celestial-reference-${day ? 'ivory-v1' : 'obsidian-v1'}`;
+  material.customProgramCacheKey = () => `celestial-reference-${day ? 'ivory-volume-v2' : 'obsidian-soft-v2'}`;
   return material;
 }
 
@@ -58,23 +59,23 @@ export function createGemMaterials() {
   const common = { metalness:0, roughness:.045, clearcoat:1, clearcoatRoughness:.035,
     ior:1.54, specularIntensity:1, envMapIntensity:1.15 };
   // Milky glass retains its ivory silhouette instead of transmitting the board's artwork.
-  const ivory = new THREE.MeshPhysicalMaterial({...common, color:'#fff1d5',
-    transmission:.62, roughness:.045, thickness:.38, ior:1.49,
+  const ivory = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#fff8e9',
+    transmission:.94, roughness:.035, thickness:.24, ior:1.49,
     attenuationColor:'#ffe5af', attenuationDistance:1.6,
-    emissive:'#fff0d3', emissiveIntensity:.18,
-    clearcoat:1, clearcoatRoughness:.035, envMapIntensity:1.15});
-  const ivoryTop = new THREE.MeshPhysicalMaterial({...common, color:'#fff4df',
-    transmission:.22, thickness:.30, roughness:.055,
-    emissive:'#fff0d5', emissiveIntensity:.24, envMapIntensity:1.0});
-  const obsidian = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#050b18',
+    emissive:'#fff0d3', emissiveIntensity:.025,
+    clearcoat:1, clearcoatRoughness:.045, envMapIntensity:.8}),true);
+  const ivoryTop = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#fff7e7',
+    transmission:.70, thickness:.36, roughness:.06,
+    emissive:'#fff0d5', emissiveIntensity:.04, envMapIntensity:.8}),true);
+  const obsidian = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#081529',
     transmission:.06, thickness:.78, ior:1.56, attenuationColor:'#07152e',
-    attenuationDistance:.28, envMapIntensity:1.65}), false);
-  const amberBase = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#ffe6b5',
-    transmission:.76, thickness:.26, attenuationColor:'#ffdd96', attenuationDistance:.8,
-    emissive:'#ffcc78', emissiveIntensity:1.15, envMapIntensity:1.1}), true);
-  const whiteTrim = new THREE.MeshPhysicalMaterial({...common, color:'#fff0ce', transmission:.5,
-    thickness:.06, emissive:'#ffd18b', emissiveIntensity:.85});
+    attenuationDistance:.28, envMapIntensity:1.3}), false);
+  const amberBase = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#fff4df',
+    transmission:.96, thickness:.19, attenuationColor:'#ffdd96', attenuationDistance:.8,
+    emissive:'#ffcc78', emissiveIntensity:.015, envMapIntensity:.85}), true);
+  const whiteTrim = new THREE.MeshPhysicalMaterial({...common, color:'#fff0ce', transmission:.9,
+    thickness:.06, emissive:'#ffd18b', emissiveIntensity:.08});
   const blackTrim = new THREE.MeshPhysicalMaterial({...common, color:'#071932', transmission:.08,
-    thickness:.10, emissive:'#1875df', emissiveIntensity:.025, envMapIntensity:2});
+    thickness:.10, emissive:'#1875df', emissiveIntensity:.025, envMapIntensity:1.2});
   return {ivory,ivoryTop,obsidian,amberBase,whiteTrim,blackTrim};
 }
