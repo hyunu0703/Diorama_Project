@@ -59,10 +59,10 @@ room.clear();
 // Empty panoramic chassis: only shell, glass, fasteners and feet. No components.
 const chassis = new THREE.Group();
 scene.add(chassis);
-const metal = new THREE.MeshStandardMaterial({color:0xbfc3c6,metalness:.8,roughness:.28});
+const metal = new THREE.MeshStandardMaterial({color:0x68727e,metalness:.85,roughness:.23});
 const panel = new THREE.MeshStandardMaterial({color:0xd4d7d9,metalness:.55,roughness:.38,side:THREE.DoubleSide});
 const dark = new THREE.MeshStandardMaterial({color:0x262a2e,metalness:.45,roughness:.45});
-const glass = new THREE.MeshPhysicalMaterial({color:0xf1fcff,metalness:0,roughness:.045,transmission:.96,thickness:.035,ior:1.46,transparent:true,opacity:1,side:THREE.DoubleSide,envMapIntensity:.7,depthWrite:false});
+const glass = new THREE.MeshPhysicalMaterial({color:0xffffff,metalness:0,roughness:.015,transmission:1,thickness:.012,ior:1.45,transparent:true,opacity:.16,side:THREE.DoubleSide,envMapIntensity:.2,depthWrite:false});
 function caseBox(w,h,d,x,y,z,material=metal){
   const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
   mesh.position.set(x,y,z);chassis.add(mesh);return mesh;
@@ -70,19 +70,19 @@ function caseBox(w,h,d,x,y,z,material=metal){
 const W=2.6,H=4.2,D=3.6;
 caseBox(W,.14,D,0,-H/2,0,panel);
 caseBox(.08,H,D,-W/2,0,0,panel);
-caseBox(W,H,.08,0,0,-D/2,panel);
-// Thin perimeter rails leave the meeting corner of the front and side glass open.
+caseBox(W,H,.08,0,0,D/2,panel);
+// The narrow glass face is opposite its original position; match the open corner.
 for(const y of [-H/2+.08,H/2]){
   for(const z of [-D/2,D/2])caseBox(W,.085,.075,0,y,z);
   for(const x of [-W/2,W/2])caseBox(.075,.085,D,x,y,0);
 }
-for(const [x,z] of [[-W/2,-D/2],[-W/2,D/2],[W/2,-D/2]])caseBox(.075,H,.075,x,0,z);
+for(const [x,z] of [[-W/2,-D/2],[-W/2,D/2],[W/2,D/2]])caseBox(.075,H,.075,x,0,z);
 caseBox(.025,H-.16,D-.12,W/2,0,0,glass);
-caseBox(W-.1,H-.16,.025,0,0,D/2,glass);
+caseBox(W-.1,H-.16,.025,0,0,-D/2,glass);
 caseBox(W-.1,.025,D-.12,0,H/2,0,glass);
 // Soft blue-gray glass edges make all three transparent panes legible.
 const edgeMaterial=new THREE.LineBasicMaterial({color:0x9caeb3,transparent:true,opacity:.38});
-for(const [w,h,d,x,y,z] of [[.025,H-.16,D-.12,W/2,0,0],[W-.1,H-.16,.025,0,0,D/2],[W-.1,.025,D-.12,0,H/2,0]]){
+for(const [w,h,d,x,y,z] of [[.025,H-.16,D-.12,W/2,0,0],[W-.1,H-.16,.025,0,0,-D/2],[W-.1,.025,D-.12,0,H/2,0]]){
  const geometry=new THREE.BoxGeometry(w,h,d);
  const edge=new THREE.LineSegments(new THREE.EdgesGeometry(geometry),edgeMaterial);
  edge.position.set(x,y,z);chassis.add(edge);geometry.dispose();
@@ -102,7 +102,7 @@ scene.add(new THREE.HemisphereLight(0xffffff,0x858a91,2));
 const keyLight=new THREE.DirectionalLight(0xffffff,3.5);keyLight.position.set(4,7,5);scene.add(keyLight);
 const rimLight=new THREE.DirectionalLight(0xdbeaff,2);rimLight.position.set(-4,3,-3);scene.add(rimLight);
 
-let angle = .82, elevation = .26, distance = 10.5, targetDistance = 10.5, drag = null;
+let angle = Math.PI-.82, elevation = .26, distance = 10.5, targetDistance = 10.5, drag = null;
 const target=new THREE.Vector3();
 const cameraRight=new THREE.Vector3(),cameraUp=new THREE.Vector3();
 const canvas = renderer.domElement;
