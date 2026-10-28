@@ -36,10 +36,11 @@ function inclusions(material, day) {
           float star=(1.0-smoothstep(.025,.13,length(f-center)))*step(.87,gemHash(cell+83.0));
           ${day ? `
           float cloud=smoothstep(.47,.78,mist);
-          float pedestal=exp(-max(p.y,0.0)*5.0);
+          // The same trapped golden light fills the pedestal, torso, neck and head.
+          float pedestal=.62;
           light+=vec3(1.0,.69,.28)*(0.012+pedestal*(.055+.20*cloud));
-          light+=vec3(1.0,.60,.15)*exp(-max(p.y,0.0)*12.0)*.25;
-          light+=vec3(1.0,.79,.43)*star*(2.0+9.0*exp(-max(p.y,0.0)*5.0));
+          light+=vec3(1.0,.60,.15)*.32*.25;
+          light+=vec3(1.0,.79,.43)*star*7.5;
           ` : `
           float nebula=smoothstep(.36,.79,mist);
           light+=mix(vec3(.001,.006,.019),vec3(.025,.009,.052),nebula)*.20;
@@ -72,7 +73,7 @@ function inclusions(material, day) {
 
     `);
   };
-  material.customProgramCacheKey = () => `celestial-reference-${day ? 'ivory-upper-v5' : 'obsidian-upper-v5'}`;
+  material.customProgramCacheKey = () => `celestial-reference-${day ? 'gold-all-heights-v6' : 'obsidian-upper-v5'}`;
   return material;
 }
 
@@ -80,10 +81,10 @@ export function createGemMaterials() {
   const common = { metalness:0, roughness:.045, clearcoat:1, clearcoatRoughness:.035,
     ior:1.54, specularIntensity:1, envMapIntensity:1.15 };
   // Milky glass retains its ivory silhouette instead of transmitting the board's artwork.
-  const ivory = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#fffcf5',
+  const ivory = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#fff4df',
     transmission:.995, roughness:.018, thickness:.16, ior:1.49,
-    attenuationColor:'#fff0d4', attenuationDistance:2.8,
-    emissive:'#fff0d3', emissiveIntensity:.008,
+    attenuationColor:'#ffdd96', attenuationDistance:1.8,
+    emissive:'#ffcc78', emissiveIntensity:.008,
     clearcoat:1, clearcoatRoughness:.025, envMapIntensity:1.8}),true);
   // Share one glass material across spherical heads, carved heads and crown details.
   // Separate cap parameters previously made some white heads look opaque and creamy.
