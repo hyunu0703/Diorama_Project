@@ -60,11 +60,19 @@ function inclusions(material, day) {
       float gemSpecKey=pow(max(dot(gemReflected,normalize(vec3(-.5,.85,.55))),0.0),44.0);
       float gemSpecFill=pow(max(dot(gemReflected,normalize(vec3(.8,.55,-.65))),0.0),32.0);
       float gemSpecFront=pow(max(dot(gemReflected,normalize(vec3(-.3,.4,1.0))),0.0),64.0);
-      totalEmissiveRadiance += ${day ? 'vec3(1.0,.92,.76)*(.006+.22*gemEdge+.06*gemBlueSoft)+vec3(1.0,.95,.85)*(.85*gemSpecKey+.55*gemSpecFill+.40*gemSpecFront)' : 'vec3(.035,.25,1.0)*(.20*gemEdge*gemEdge*(.20+.80*gemBlueSoft)+1.25*gemSpecFill)+vec3(.65,.82,1.0)*(.95*gemSpecKey+.50*gemSpecFront)'};
+      // Narrow studio strips extend up the neck and body. Their angular mask keeps
+      // unlit black glass black, while a separate overhead catchlight reaches each head.
+      float gemUpper=smoothstep(.20,.55,gemPosition.y);
+      float gemUpperGain=mix(1.0,4.0,gemUpper);
+      vec2 gemAzimuth=normalize(gemReflected.xz+vec2(.00001));
+      float gemStrip=pow(max(dot(gemAzimuth,normalize(vec2(-.65,.76))),0.0),100.0);
+      gemStrip*=smoothstep(-.65,-.30,gemReflected.y)*(1.0-smoothstep(.88,.99,gemReflected.y));
+      float gemCrown=pow(max(gemReflected.y,0.0),64.0);
+      totalEmissiveRadiance += ${day ? 'vec3(1.0,.92,.76)*(.006+.22*gemEdge+.06*gemBlueSoft)+vec3(1.0,.95,.85)*(gemUpperGain*(.85*gemSpecKey+.55*gemSpecFill+.40*gemSpecFront)+gemUpper*(1.5*gemStrip+2.0*gemCrown))' : 'vec3(.035,.25,1.0)*(.20*gemEdge*gemEdge*(.20+.80*gemBlueSoft)+gemUpperGain*1.25*gemSpecFill)+vec3(.65,.82,1.0)*(gemUpperGain*(.95*gemSpecKey+.50*gemSpecFront)+gemUpper*(2.2*gemStrip+2.4*gemCrown))'};
 
     `);
   };
-  material.customProgramCacheKey = () => `celestial-reference-${day ? 'ivory-gloss-v4' : 'obsidian-black-gloss-v4'}`;
+  material.customProgramCacheKey = () => `celestial-reference-${day ? 'ivory-upper-v5' : 'obsidian-upper-v5'}`;
   return material;
 }
 
