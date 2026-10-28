@@ -37,7 +37,7 @@ function inclusions(material, day) {
           ${day ? `
           float cloud=smoothstep(.47,.78,mist);
           float pedestal=exp(-max(p.y,0.0)*5.0);
-          light+=vec3(1.0,.69,.28)*(0.004+pedestal*(.055+.20*cloud));
+          light+=vec3(1.0,.69,.28)*(0.012+pedestal*(.055+.20*cloud));
           light+=vec3(1.0,.60,.15)*exp(-max(p.y,0.0)*12.0)*.25;
           light+=vec3(1.0,.79,.43)*star*(2.0+9.0*exp(-max(p.y,0.0)*5.0));
           ` : `
@@ -54,7 +54,7 @@ function inclusions(material, day) {
       vec3 gemWorldNormal=inverseTransformDirection(normal,viewMatrix);
       float gemBlueSoft=pow(max(dot(gemWorldNormal,normalize(vec3(-.7,.8,.5))),0.0),5.0);
       float gemBlueSide=pow(max(dot(gemWorldNormal,normalize(vec3(.8,.3,-.6))),0.0),8.0);
-      totalEmissiveRadiance += ${day ? 'vec3(1.0,.92,.76)*(.006+.13*gemEdge)' : 'vec3(.035,.32,1.0)*(.055+.80*gemEdge+.55*gemBlueSoft+.40*gemBlueSide)'};
+      totalEmissiveRadiance += ${day ? 'vec3(1.0,.92,.76)*(.006+.22*gemEdge+.06*gemBlueSoft)' : 'vec3(.025,.26,1.0)*(.020+.45*gemEdge+.20*gemBlueSoft+.17*gemBlueSide)'};
     `);
   };
   material.customProgramCacheKey = () => `celestial-reference-${day ? 'ivory-clear-v3' : 'obsidian-bright-v3'}`;
@@ -71,8 +71,8 @@ export function createGemMaterials() {
     emissive:'#fff0d3', emissiveIntensity:.008,
     clearcoat:1, clearcoatRoughness:.025, envMapIntensity:1.8}),true);
   const ivoryTop = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#fff7e7',
-    transmission:.90, thickness:.22, roughness:.035,
-    emissive:'#fff0d5', emissiveIntensity:.015, envMapIntensity:1.5}),true);
+    transmission:.82, thickness:.22, roughness:.035,
+    emissive:'#fff0d5', emissiveIntensity:.12, envMapIntensity:1.5}),true);
   const obsidian = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#102749',
     transmission:.06, thickness:.78, ior:1.56, attenuationColor:'#07152e',
     attenuationDistance:.28, envMapIntensity:2.8}), false);
