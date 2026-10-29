@@ -77,26 +77,52 @@ function inclusions(material, day) {
   return material;
 }
 
+// Pastel cut crystal: triangular optical facets and view-dependent pearlescent colour.
+function pastelCrystal(material) {
+  material.onBeforeCompile = shader => {
+    shader.vertexShader=shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 crystalLocal;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\ncrystalLocal=position;');
+    shader.fragmentShader=shader.fragmentShader.replace('#include <common>', `#include <common>
+      varying vec3 crystalLocal;
+      float crystalHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+    `).replace('#include <color_fragment>', `#include <color_fragment>
+      vec2 crystalGrid=vec2(atan(crystalLocal.z,crystalLocal.x)*1.8,crystalLocal.y*5.);
+      vec2 crystalCell=floor(crystalGrid), crystalUV=fract(crystalGrid);
+      float crystalHalf=step(crystalUV.x,crystalUV.y);
+      float crystalSeed=crystalHash(crystalCell+crystalHalf*17.);
+      vec3 crystalTint=mix(vec3(.43,.27,.86),vec3(.78,.46,.83),smoothstep(.15,.65,crystalSeed));
+      crystalTint=mix(crystalTint,vec3(.38,.80,1.),smoothstep(.65,.95,crystalSeed));
+      diffuseColor.rgb*=mix(vec3(.88,.91,1.),crystalTint,.50);
+    `).replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
+      vec3 crystalFacet=normalize(vec3(crystalHash(crystalCell+3.)-.5,crystalHash(crystalCell+9.)-.5,crystalHash(crystalCell+27.)-.5));
+      normal=normalize(normal+crystalFacet*.22);
+    `).replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      float crystalEdge=pow(1.-abs(dot(normal,normalize(vViewPosition))),3.);
+      float crystalDiagonal=abs(crystalUV.x-crystalUV.y)*.7071;
+      float crystalBorder=min(min(crystalUV.x,1.-crystalUV.x),min(crystalUV.y,1.-crystalUV.y));
+      float crystalLine=1.-smoothstep(.008,.035,min(crystalDiagonal,crystalBorder));
+      totalEmissiveRadiance+=crystalTint*(.10+.22*crystalEdge)+vec3(.85,.90,1.)*crystalLine*.10;
+    `);
+  };
+  material.customProgramCacheKey=()=> 'pastel-cut-crystal-v1';
+  return material;
+}
+
 export function createGemMaterials() {
   const common = { metalness:0, roughness:.045, clearcoat:1, clearcoatRoughness:.035,
     ior:1.54, specularIntensity:1, envMapIntensity:1.15 };
-  // Milky glass retains its ivory silhouette instead of transmitting the board's artwork.
-  const ivory = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#fff4df',
-    transmission:.995, roughness:.018, thickness:.16, ior:1.49,
-    attenuationColor:'#ffdd96', attenuationDistance:1.8,
-    emissive:'#ffcc78', emissiveIntensity:.008,
-    clearcoat:1, clearcoatRoughness:.025, envMapIntensity:1.8}),true);
-  // Share one glass material across spherical heads, carved heads and crown details.
-  // Separate cap parameters previously made some white heads look opaque and creamy.
-  const ivoryTop = ivory;
+  const crystalParameters={...common,color:'#f5efff',transmission:.68,thickness:.35,
+    roughness:.055,ior:1.78,dispersion:.75,iridescence:1,iridescenceIOR:1.3,
+    iridescenceThicknessRange:[180,420],attenuationColor:'#c9bcff',attenuationDistance:2.8,
+    clearcoat:1,clearcoatRoughness:.025,envMapIntensity:1.65};
+  const ivory=pastelCrystal(new THREE.MeshPhysicalMaterial(crystalParameters));
+  const ivoryTop=ivory;
   const obsidian = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#020409',
     transmission:.06, thickness:.78, ior:1.56, attenuationColor:'#07152e',
     attenuationDistance:.28, envMapIntensity:1.4}), false);
-  const amberBase = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#fff4df',
-    transmission:1, thickness:.15, attenuationColor:'#ffdd96', attenuationDistance:1.8,
-    emissive:'#ffcc78', emissiveIntensity:.008, envMapIntensity:1.5}), true);
-  const whiteTrim = new THREE.MeshPhysicalMaterial({...common, color:'#fff0ce', transmission:.9,
-    thickness:.06, emissive:'#ffd18b', emissiveIntensity:.08});
+  const amberBase=ivory;
+  const whiteTrim=pastelCrystal(new THREE.MeshPhysicalMaterial({...crystalParameters,
+    transmission:.55,thickness:.10,envMapIntensity:1.9}));
   const blackTrim = new THREE.MeshPhysicalMaterial({...common, color:'#030811', transmission:.08,
     thickness:.10, emissive:'#1875df', emissiveIntensity:.035, envMapIntensity:1.4});
   return {ivory,ivoryTop,obsidian,amberBase,whiteTrim,blackTrim};
