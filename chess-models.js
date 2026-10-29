@@ -206,7 +206,7 @@ export function buildChessPieces({ board, ivory, ivoryTop, amberBase, obsidian, 
   function ring(r,t,y,material,parent){const key=`${r}:${t}`;if(!ringGeometryCache.has(key))ringGeometryCache.set(key,new THREE.TorusGeometry(r,t,16,112));const m=add(ringGeometryCache.get(key),material,parent,0,y,0);m.rotation.x=Math.PI/2;return m;}
   function curve(points,radius,material,parent){const line=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));return add(new THREE.TubeGeometry(line,40,radius,8,false),material,parent);}
   function piece(type,column,row,white) {
-    const p=new THREE.Group();p.name=`${white?'ivory':'obsidian'}-${type}-${column}`;p.position.set(column-3.5,.12,row-3.5);board.add(p);
+    const p=new THREE.Group();p.name=`${white?'ivory':'obsidian'}-${type}-${column}`;p.userData={type,white,column,row};p.position.set(column-3.5,.12,row-3.5);board.add(p);
     const material=white?ivory:obsidian,top=white?ivoryTop:obsidian,trim=white?whiteTrim:blackTrim;
     disk(p,.98,.002,shadowMap,'#000000',.74);
     // Light stays inside the glass pedestal. The matte board has no specular reflection or halo decals.
