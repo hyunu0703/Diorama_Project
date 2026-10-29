@@ -19,11 +19,13 @@ export function createPieceAnimator() {
     },
     capture(piece,{delay=0,duration=1.35,direction={x:1,z:0},onStart,onComplete}={}) {
       const from=piece.position.clone(),rotation=piece.rotation.clone();
-      // Send every captured piece past the 4.21-unit frame, even from the center.
-      let dx=from.x,dz=from.z;
-      if(Math.hypot(dx,dz)<.01){dx=direction.x;dz=direction.z;}
-      const length=Math.hypot(dx,dz)||1;dx/=length;dz/=length;
-      const travel=(7.2-Math.max(Math.abs(from.x),Math.abs(from.z)))/Math.max(Math.abs(dx),Math.abs(dz));
+      // Continue the attacker's from-to vector, regardless of the capture square.
+      const length=Math.hypot(direction.x,direction.z);
+      const dx=length?direction.x/length:1,dz=length?direction.z/length:0;
+      // Intersect that forward ray with an outer boundary beyond the board frame.
+      const exitX=dx?(Math.sign(dx)*7.2-from.x)/dx:Infinity;
+      const exitZ=dz?(Math.sign(dz)*7.2-from.z)/dz:Infinity;
+      const travel=Math.min(exitX,exitZ);
       const end={x:from.x+dx*travel,z:from.z+dz*travel};
       schedule(duration,delay,t=>{
         const outward=1-(1-t)**1.45;

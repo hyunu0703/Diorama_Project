@@ -56,3 +56,7 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 outputs/
+
+# Local Sites publishing checkout and deployment archives
+/site-edit/
+/*.tar.gz

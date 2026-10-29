@@ -87,7 +87,7 @@ export function setupChessInteraction({board,pieces,tiles,canvas,camera}) {
     pendingPromotion=null;if(promotionDialog.open)promotionDialog.close();
     updateGameStatus();
     finishedMessage=game.state().over?undefined:`${sideName(result.color)} ${names[result.promotion?pieceTypes[result.promotion]:piece.userData.type]} ${from} → ${to}${result.captureSquare?' · 잡기':''}${result.rook?' · 캐슬링':''}. ${sideName(game.state().turn)} 차례입니다.`;
-    selectPiece(null,`${sideName(result.color)} ${names[piece.userData.type]} ${from} → ${to}${captured?' · 상대 말을 체스판 밖으로 날려 보냅니다.':' · 이동 중…'}`);
+    selectPiece(null,`${sideName(result.color)} ${names[piece.userData.type]} ${from} → ${to}${captured?' · 상대 말을 공격 방향으로 날려 보냅니다.':' · 이동 중…'}`);
     canvas.classList.remove('selectable');document.body.dataset.animation='moving';
   }
   function hitBoard(e) {

@@ -2,6 +2,7 @@ import * as THREE from './three.module.js';
 import { buildChessPieces } from './chess-models.js';
 import { createGemMaterials } from './celestial-gems.js';
 import { setupChessInteraction } from './chess-interaction.js';
+import { addRealmBackground } from './realm-background.js?v=5';
 
 const scene=new THREE.Scene();scene.background=new THREE.Color('#050609');scene.fog=new THREE.FogExp2('#050609',.025);
 const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,100);
@@ -93,18 +94,17 @@ void main(){
   for(int i=0;i<20;i++){
     vec3 p=eye+ray*(enter+(float(i)+.5)*stepLength);
     float edge=pow(pow(abs(p.x),4.)+pow(abs(p.z),4.),.25);
-    float surround=mix(.22,1.,smoothstep(2.3,4.7,edge))*(1.-smoothstep(4.8,8.5,edge+noise(p.xz*.55)*1.2));
     float height=exp(-pow((p.y-.5)/1.05,2.));
     vec2 drift=vec2(fogTime*.035,-fogTime*.022);
     float cloud=.42+.4*noise(p.xz*.72+drift)+.18*noise(p.xz*1.8-drift);
-    float day=smoothstep(-1.15,1.15,p.z);
+    // No atmospheric density on the night half (z <= 0).
+    float day=smoothstep(0.,1.15,p.z);
     // Day mist stays thin over the playing area and disperses beyond the rim.
     float daySurround=mix(.018,.48,smoothstep(3.5,5.8,edge))
       *exp(-pow(max(edge-5.,0.)/3.,2.));
-    surround=mix(surround,daySurround,day);
-    float density=surround*height*cloud*mix(1.2,.2,day);
+    float density=daySurround*height*cloud*.2*day;
     float alpha=1.-exp(-density*stepLength);
-    mist+=transmittance*alpha*mix(vec3(.0003,.0004,.0007),vec3(.34,.36,.39),day);
+    mist+=transmittance*alpha*vec3(.34,.36,.39);
     transmittance*=1.-alpha;
   }
   float haze=1.-transmittance;
@@ -117,6 +117,7 @@ void main(){
   gl_FragColor=vec4(c*v,1.);
 }`;
 const homeView={azimuth:-.78,elevation:.68,distance:25.8};
+addRealmBackground(finalMaterial,renderer);
 let azimuth=homeView.azimuth,elevation=homeView.elevation,distance=homeView.distance,goalDistance=homeView.distance,drag=null;const lookAt=new THREE.Vector3(0,-.55,0),pointers=new Map();let pinch=null;
 function fit(){return innerWidth/innerHeight<1?1/(innerWidth/innerHeight)**1.05:1;}
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);const s=renderer.getDrawingBufferSize(new THREE.Vector2());target.setSize(s.x,s.y);finalMaterial.uniforms.pixel.value.set(1/s.x,1/s.y);blurA.setSize(Math.max(1,Math.round(s.x/3)),Math.max(1,Math.round(s.y/3)));blurB.setSize(blurA.width,blurA.height);}resize();addEventListener('resize',resize);
@@ -128,3 +129,4 @@ canvas.addEventListener('wheel',e=>{e.preventDefault();goalDistance=THREE.MathUt
 addEventListener('keydown',e=>{if(e.target.matches('button,input'))return;if(e.key.toLowerCase()==='r')reset();if(e.key==='ArrowLeft')azimuth-=.08;if(e.key==='ArrowRight')azimuth+=.08;if(e.key==='ArrowUp')elevation=Math.min(1.45,elevation+.06);if(e.key==='ArrowDown')elevation=Math.max(.25,elevation-.06);if(e.key==='+'||e.key==='=')goalDistance=Math.max(11,goalDistance-1);if(e.key==='-')goalDistance=Math.min(30,goalDistance+1);});
 let last=performance.now(),frames=0;renderer.setAnimationLoop(time=>{const dt=Math.min((time-last)/1000,.1);last=time;updateAnimations(dt);distance+=(goalDistance-distance)*(1-Math.exp(-10*dt));const r=distance*fit();camera.position.set(Math.sin(azimuth)*Math.cos(elevation)*r,Math.sin(elevation)*r,Math.cos(azimuth)*Math.cos(elevation)*r).add(lookAt);camera.lookAt(lookAt);finalMaterial.uniforms.fogTime.value=time*.001;renderer.setRenderTarget(target);renderer.render(scene,camera);quad.material=blurMaterial;blurMaterial.uniforms.source.value=target.texture;blurMaterial.uniforms.threshold.value=1.4;blurMaterial.uniforms.stepUV.value.set(1.5/blurA.width,0);renderer.setRenderTarget(blurA);renderer.render(post,postCamera);blurMaterial.uniforms.source.value=blurA.texture;blurMaterial.uniforms.threshold.value=0;blurMaterial.uniforms.stepUV.value.set(0,1.5/blurA.height);renderer.setRenderTarget(blurB);renderer.render(post,postCamera);quad.material=finalMaterial;renderer.setRenderTarget(null);renderer.render(post,postCamera);if(++frames>=3&&document.body.dataset.texture==='ready'&&document.body.dataset.reflections==='ready'){document.body.classList.add('ready');document.body.dataset.pieces=pieces.length;}});
 canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();document.querySelector('#status').textContent='3D 화면 연결이 중단되었습니다. 새로고침해 주세요.';document.body.classList.remove('ready');});
+
