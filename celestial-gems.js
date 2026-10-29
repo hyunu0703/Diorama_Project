@@ -85,20 +85,20 @@ function peachCrystal(material) {
       vec3 peachReflection=reflect(-normalize(vViewPosition),normal);
       float peachPearl=.5+.5*sin(peachReflection.x*3.+peachReflection.y*4.);
       vec3 peachSheen=mix(vec3(1.,.68,.46),vec3(.95,.74,.88),peachPearl);
-      totalEmissiveRadiance+=vec3(1.,.53,.34)*.025+peachSheen*peachFresnel*.13;
+      totalEmissiveRadiance+=vec3(1.,.53,.34)*.025+peachSheen*peachFresnel*.18;
     `);
   };
-  material.customProgramCacheKey=()=> 'smooth-peach-crystal-v1';
+  material.customProgramCacheKey=()=> 'smooth-peach-crystal-v2';
   return material;
 }
 
 export function createGemMaterials() {
   const common = { metalness:0, roughness:.045, clearcoat:1, clearcoatRoughness:.035,
     ior:1.54, specularIntensity:1, envMapIntensity:1.15 };
-  const crystalParameters={...common,color:'#fff0e8',transmission:.88,thickness:.42,
-    roughness:.025,ior:1.52,dispersion:.32,iridescence:.28,iridescenceIOR:1.3,
+  const crystalParameters={...common,color:'#fff0e8',transmission:.26,thickness:.48,
+    roughness:.018,ior:1.65,dispersion:.40,iridescence:.28,iridescenceIOR:1.3,
     iridescenceThicknessRange:[180,340],attenuationColor:'#f5b49a',attenuationDistance:2.4,
-    clearcoat:1,clearcoatRoughness:.018,envMapIntensity:1.8};
+    clearcoat:1,clearcoatRoughness:.012,envMapIntensity:2.2};
   const ivory=peachCrystal(new THREE.MeshPhysicalMaterial(crystalParameters));
   const ivoryTop=ivory;
   const obsidian = inclusions(new THREE.MeshPhysicalMaterial({...common, color:'#020409',
@@ -106,7 +106,7 @@ export function createGemMaterials() {
     attenuationDistance:.28, envMapIntensity:1.4}), false);
   const amberBase=ivory;
   const whiteTrim=peachCrystal(new THREE.MeshPhysicalMaterial({...crystalParameters,
-    transmission:.82,thickness:.10,envMapIntensity:1.9}));
+    transmission:.22,thickness:.10,envMapIntensity:2.3}));
   const blackTrim = new THREE.MeshPhysicalMaterial({...common, color:'#030811', transmission:.08,
     thickness:.10, emissive:'#1875df', emissiveIntensity:.035, envMapIntensity:1.4});
   return {ivory,ivoryTop,obsidian,amberBase,whiteTrim,blackTrim};

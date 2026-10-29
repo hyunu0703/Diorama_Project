@@ -1,6 +1,6 @@
 import * as THREE from './three.module.js';
 import { buildChessPieces } from './chess-models.js';
-import { createGemMaterials } from './celestial-gems.js?v=peach-crystal-1';
+import { createGemMaterials } from './celestial-gems.js?v=peach-crystal-2';
 import { setupChessInteraction } from './chess-interaction.js';
 import { addRealmBackground } from './realm-background.js?v=6';
 
