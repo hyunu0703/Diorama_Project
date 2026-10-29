@@ -2,7 +2,7 @@ import * as THREE from './three.module.js';
 import { buildChessPieces } from './chess-models.js';
 import { createGemMaterials } from './celestial-gems.js';
 import { setupChessInteraction } from './chess-interaction.js';
-import { addRealmBackground } from './realm-background.js?v=5';
+import { addRealmBackground } from './realm-background.js?v=6';
 
 const scene=new THREE.Scene();scene.background=new THREE.Color('#050609');scene.fog=new THREE.FogExp2('#050609',.025);
 const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,100);

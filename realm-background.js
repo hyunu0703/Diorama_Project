@@ -29,9 +29,11 @@ void main(){`).replace('  c*=.96;', `
   // Intersect the actual tile surface so z=0 aligns with the board midpoint.
   vec3 boundaryPoint=eye+ray*((.107-eye.y)/min(ray.y,-.0001));
   if(ray.y>=-.0001) boundaryPoint=eye+ray*10000.;
-  // Feather only the z=0 seam; keep a gentle minimum width at distant angles.
-  float seamWidth=max(.42,fwidth(boundaryPoint.z)*6.);
-  float daylight=smoothstep(-seamWidth,seamWidth,boundaryPoint.z);
+  // Use homogeneous plane coordinates: no division or derivative spike at the horizon.
+  float downward=max(-ray.y,0.);
+  float seamCoordinate=eye.z*downward+(eye.y-.107)*ray.z;
+  float seamWidth=max(.42*downward,max(fwidth(seamCoordinate)*6.,.00001));
+  float daylight=smoothstep(-seamWidth,seamWidth,seamCoordinate);
   vec2 skyUV=uv0;
   float imageAspect=1672./941.;
   // Original centred cover framing, preserving the artwork aspect ratio.
