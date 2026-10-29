@@ -1,6 +1,6 @@
 import * as THREE from './three.module.js';
 import { buildChessPieces } from './chess-models.js';
-import { createGemMaterials } from './celestial-gems.js?v=peach-crystal-3';
+import { createGemMaterials } from './celestial-gems.js?v=peach-crystal-4';
 import { setupChessInteraction } from './chess-interaction.js';
 import { addRealmBackground } from './realm-background.js?v=6';
 
@@ -59,11 +59,11 @@ const {placeAtPointer,hoverAtPointer,destinationMarker,updateAnimations}=setupCh
 // Controlled studio reflections prevent the sky artwork from striping the sculptures.
 // A separate warm, complete reflection environment keeps white crystal consistent
 // through a full orbit; blue night-army reflection cards must not tint it grey.
-const crystalStudio=new THREE.Scene();crystalStudio.background=new THREE.Color('#b49a8b');
+const crystalStudio=new THREE.Scene();crystalStudio.background=new THREE.Color('#30231f');
 for(let i=0;i<8;i++){
   const angle=i*Math.PI/4;
   const lightCard=new THREE.Mesh(new THREE.PlaneGeometry(3.5,7),new THREE.MeshBasicMaterial({
-    map:softMap,color:new THREE.Color(i%2?'#fff0e6':'#ffdac2').multiplyScalar(3.5),side:THREE.DoubleSide}));
+    map:softMap,color:new THREE.Color(i%2?'#fff0e6':'#ffdac2').multiplyScalar(2.),side:THREE.DoubleSide}));
   lightCard.position.set(Math.sin(angle)*7,4,Math.cos(angle)*7);lightCard.lookAt(0,1,0);crystalStudio.add(lightCard);
 }
 const crystalCeiling=new THREE.Mesh(new THREE.PlaneGeometry(8,8),new THREE.MeshBasicMaterial({color:new THREE.Color('#fff1e5').multiplyScalar(2),side:THREE.DoubleSide}));
