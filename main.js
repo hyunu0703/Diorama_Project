@@ -1,6 +1,7 @@
 import * as THREE from './three.module.js';
 import { buildChessPieces } from './chess-models.js';
 import { createGemMaterials } from './celestial-gems.js';
+import { setupChessInteraction } from './chess-interaction.js';
 
 const scene=new THREE.Scene();scene.background=new THREE.Color('#050609');scene.fog=new THREE.FogExp2('#050609',.025);
 const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,100);
@@ -9,7 +10,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.VSMShadowMap;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
 document.querySelector('#world').appendChild(renderer.domElement);
-const canvas=renderer.domElement;canvas.setAttribute('aria-label','3D 체스보드. 말을 클릭해 선택한 뒤 빈 타일을 클릭해 배치. 드래그 회전, 휠 확대.');canvas.setAttribute('role','img');
+const canvas=renderer.domElement;canvas.setAttribute('aria-label','3D 체스보드. 말을 선택하면 합법적인 이동 칸 표시. 표시된 칸을 클릭해 이동. 드래그 회전, 휠 확대.');canvas.setAttribute('role','img');
 let seed=7452;function random(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}
 const {ivory,ivoryTop,amberBase,obsidian,whiteTrim,blackTrim}=createGemMaterials();
 const whiteGlow=new THREE.MeshBasicMaterial({color:new THREE.Color('#ffd28b').multiplyScalar(1.65),toneMapped:false});
@@ -52,21 +53,7 @@ const shadowMap=radialTexture('rgba(0,0,0,.55)','rgba(0,0,0,0)'),poolMap=radialT
 function disk(parent,size,y,map,color,opacity,additive=false){const m=new THREE.Mesh(new THREE.PlaneGeometry(size,size),new THREE.MeshBasicMaterial({map,color,transparent:true,opacity,depthWrite:false,blending:additive?THREE.AdditiveBlending:THREE.NormalBlending}));m.rotation.x=-Math.PI/2;m.position.y=y;parent.add(m);return m;}
 disk(scene,12,-.355,shadowMap,'#241810',.8);
 const {pieces,shapes}=buildChessPieces({board,ivory,ivoryTop,amberBase,obsidian,whiteTrim,blackTrim,whiteGlow,blackGlow,shadowMap,poolMap,disk,random});
-// Placement is free-form: occupied squares select their piece, empty squares accept it.
-const placementStatus=document.querySelector('#placement-status'),cancelSelection=document.querySelector('#cancel-selection');
-const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
-const names={pawn:'폰',rook:'룩',knight:'나이트',bishop:'비숍',queen:'퀸',king:'킹'};
-let selectedPiece=null;
-function marker(geometry,color,opacity){const m=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthWrite:false,depthTest:false,toneMapped:false,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;m.position.y=.115;m.renderOrder=10;m.visible=false;board.add(m);return m;}
-const selectionMarker=marker(new THREE.RingGeometry(.39,.46,64),'#ffe0a0',.95);
-const destinationMarker=marker(new THREE.PlaneGeometry(.94,.94),'#9ddfff',.28);
-function squareName({column,row}){return `${'abcdefgh'[column]}${8-row}`;}
-function selectPiece(piece,message){selectedPiece=piece;selectionMarker.visible=!!piece;destinationMarker.visible=false;cancelSelection.hidden=!piece;if(piece){selectionMarker.position.x=piece.position.x;selectionMarker.position.z=piece.position.z;}placementStatus.textContent=message||(piece?`${piece.userData.white?'백':'흑'} ${names[piece.userData.type]} · ${squareName(piece.userData)} 선택 — 빈 타일을 클릭해 배치하세요.`:'말을 선택한 뒤 빈 타일을 클릭해 자유롭게 배치하세요.');}
-function hitBoard(e){const rect=canvas.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects([...pieces,...tiles],true).find(h=>h.object.isMesh);if(!hit)return null;let object=hit.object;while(object.parent&&object.parent!==board)object=object.parent;if(pieces.includes(object))return{piece:object,tile:object.userData};if(tiles.includes(object)){const tile=object.userData;return{tile,piece:pieces.find(p=>p.userData.column===tile.column&&p.userData.row===tile.row)};}return null;}
-function placeAtPointer(e){const hit=hitBoard(e);if(!hit){selectPiece(null);return;}if(hit.piece){selectPiece(hit.piece===selectedPiece?null:hit.piece);return;}if(!selectedPiece)return;const piece=selectedPiece;Object.assign(piece.userData,hit.tile);piece.position.x=hit.tile.column-3.5;piece.position.z=hit.tile.row-3.5;selectPiece(null,`${piece.userData.white?'백':'흑'} ${names[piece.userData.type]}을 ${squareName(hit.tile)} 타일에 배치했습니다. 다음 말을 선택하세요.`);}
-function hoverAtPointer(e){const hit=hitBoard(e);canvas.classList.toggle('selectable',!!hit&&(!!hit.piece||!!selectedPiece));destinationMarker.visible=!!selectedPiece&&!!hit&&!hit.piece;if(destinationMarker.visible){destinationMarker.position.x=hit.tile.column-3.5;destinationMarker.position.z=hit.tile.row-3.5;}}
-cancelSelection.addEventListener('click',()=>selectPiece(null));
-addEventListener('keydown',e=>{if(e.key==='Escape')selectPiece(null);});
+const {placeAtPointer,hoverAtPointer,destinationMarker}=setupChessInteraction({board,pieces,tiles,canvas,camera});
 // Controlled studio reflections prevent the sky artwork from striping the sculptures.
 for(const material of[ivory,ivoryTop,amberBase,obsidian,whiteTrim,blackTrim]){material.envMap=environment.texture;material.needsUpdate=true;}
 document.body.dataset.reflections='ready';
@@ -141,10 +128,3 @@ canvas.addEventListener('wheel',e=>{e.preventDefault();goalDistance=THREE.MathUt
 addEventListener('keydown',e=>{if(e.target.matches('button,input'))return;if(e.key.toLowerCase()==='r')reset();if(e.key==='ArrowLeft')azimuth-=.08;if(e.key==='ArrowRight')azimuth+=.08;if(e.key==='ArrowUp')elevation=Math.min(1.45,elevation+.06);if(e.key==='ArrowDown')elevation=Math.max(.25,elevation-.06);if(e.key==='+'||e.key==='=')goalDistance=Math.max(11,goalDistance-1);if(e.key==='-')goalDistance=Math.min(30,goalDistance+1);});
 let last=performance.now(),frames=0;renderer.setAnimationLoop(time=>{const dt=Math.min((time-last)/1000,.1);last=time;distance+=(goalDistance-distance)*(1-Math.exp(-10*dt));const r=distance*fit();camera.position.set(Math.sin(azimuth)*Math.cos(elevation)*r,Math.sin(elevation)*r,Math.cos(azimuth)*Math.cos(elevation)*r).add(lookAt);camera.lookAt(lookAt);finalMaterial.uniforms.fogTime.value=time*.001;renderer.setRenderTarget(target);renderer.render(scene,camera);quad.material=blurMaterial;blurMaterial.uniforms.source.value=target.texture;blurMaterial.uniforms.threshold.value=1.4;blurMaterial.uniforms.stepUV.value.set(1.5/blurA.width,0);renderer.setRenderTarget(blurA);renderer.render(post,postCamera);blurMaterial.uniforms.source.value=blurA.texture;blurMaterial.uniforms.threshold.value=0;blurMaterial.uniforms.stepUV.value.set(0,1.5/blurA.height);renderer.setRenderTarget(blurB);renderer.render(post,postCamera);quad.material=finalMaterial;renderer.setRenderTarget(null);renderer.render(post,postCamera);if(++frames>=3&&document.body.dataset.texture==='ready'&&document.body.dataset.reflections==='ready'){document.body.classList.add('ready');document.body.dataset.pieces=pieces.length;}});
 canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();document.querySelector('#status').textContent='3D 화면 연결이 중단되었습니다. 새로고침해 주세요.';document.body.classList.remove('ready');});
-
-
-
-
-
-
-
