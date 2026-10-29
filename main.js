@@ -2,7 +2,7 @@ import * as THREE from './three.module.js';
 import { buildChessPieces } from './chess-models.js';
 import { createGemMaterials } from './celestial-gems.js?v=peach-crystal-4';
 import { setupChessInteraction } from './chess-interaction.js';
-import { addRealmBackground } from './realm-background.js?v=6';
+import { addRealmBackground } from './realm-background.js?v=7';
 
 const scene=new THREE.Scene();scene.background=new THREE.Color('#050609');scene.fog=new THREE.FogExp2('#050609',.025);
 const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,100);
@@ -137,7 +137,9 @@ void main(){
   gl_FragColor=vec4(c*v,1.);
 }`;
 const homeView={azimuth:-.78,elevation:.68,distance:25.8};
-addRealmBackground(finalMaterial,renderer);
+addRealmBackground(finalMaterial,renderer,scene);
+// The obsolete black stage must not occlude the sky in the transmission buffer.
+floor.visible=false;
 let azimuth=homeView.azimuth,elevation=homeView.elevation,distance=homeView.distance,goalDistance=homeView.distance,drag=null;const lookAt=new THREE.Vector3(0,-.55,0),pointers=new Map();let pinch=null;
 function fit(){return innerWidth/innerHeight<1?1/(innerWidth/innerHeight)**1.05:1;}
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);const s=renderer.getDrawingBufferSize(new THREE.Vector2());target.setSize(s.x,s.y);finalMaterial.uniforms.pixel.value.set(1/s.x,1/s.y);blurA.setSize(Math.max(1,Math.round(s.x/3)),Math.max(1,Math.round(s.y/3)));blurB.setSize(blurA.width,blurA.height);}resize();addEventListener('resize',resize);
