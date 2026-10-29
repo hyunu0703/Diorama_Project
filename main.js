@@ -44,11 +44,12 @@ function mesh(geo,mat,parent,x=0,y=0,z=0){const m=new THREE.Mesh(geo,mat);m.posi
 const frame=new THREE.MeshPhysicalMaterial({color:'#171719',metalness:0,roughness:1,clearcoat:0,specularIntensity:0,envMapIntensity:0});mesh(new THREE.BoxGeometry(8.42,.4,8.42),frame,board,0,-.13,0);
 mesh(new THREE.BoxGeometry(8.16,.035,8.16),new THREE.MeshPhysicalMaterial({color:'#080f18',metalness:0,roughness:1,specularIntensity:0,envMapIntensity:0}),board,0,.083,0);
 const atlas=new THREE.TextureLoader().load('./assets/celestial-board.png',()=>{document.body.dataset.texture='ready';},undefined,()=>{document.body.dataset.texture='error';});atlas.colorSpace=THREE.SRGBColorSpace;atlas.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
-const tileMaterial=new THREE.MeshPhysicalMaterial({map:atlas,color:'#ffffff',roughness:1,metalness:0,clearcoat:0,specularIntensity:0,envMapIntensity:0,emissiveIntensity:0});
+// Unlit tiles display the artwork directly, without lighting, reflections or scene fog.
+const tileMaterial=new THREE.MeshBasicMaterial({map:atlas,color:'#ffffff',fog:false});
 // Abutting tiles have no dark physical gap. Crop the atlas's printed black borders out of each UV cell.
 const tileInset=.03;
 const tiles=[];
-for(let r=0;r<8;r++)for(let c=0;c<8;c++){const geo=new THREE.PlaneGeometry(1,1),uv=geo.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,(c+tileInset+uv.getX(i)*(1-2*tileInset))/8,1-(r+1-tileInset-uv.getY(i)*(1-2*tileInset))/8);const t=mesh(geo,tileMaterial,board,c-3.5,.107,r-3.5);t.rotation.x=-Math.PI/2;t.castShadow=false;t.userData={column:c,row:r};tiles.push(t);}
+for(let r=0;r<8;r++)for(let c=0;c<8;c++){const geo=new THREE.PlaneGeometry(1,1),uv=geo.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,(c+tileInset+uv.getX(i)*(1-2*tileInset))/8,1-(r+1-tileInset-uv.getY(i)*(1-2*tileInset))/8);const t=mesh(geo,tileMaterial,board,c-3.5,.107,r-3.5);t.rotation.x=-Math.PI/2;t.castShadow=false;t.receiveShadow=false;t.userData={column:c,row:r};tiles.push(t);}
 function radialTexture(inner,outer){const c=document.createElement('canvas');c.width=c.height=128;const ctx=c.getContext('2d'),g=ctx.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,inner);g.addColorStop(1,outer);ctx.fillStyle=g;ctx.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);}
 const shadowMap=radialTexture('rgba(0,0,0,.55)','rgba(0,0,0,0)'),poolMap=radialTexture('rgba(255,255,255,.6)','rgba(255,255,255,0)');
 function disk(parent,size,y,map,color,opacity,additive=false){const m=new THREE.Mesh(new THREE.PlaneGeometry(size,size),new THREE.MeshBasicMaterial({map,color,transparent:true,opacity,depthWrite:false,blending:additive?THREE.AdditiveBlending:THREE.NormalBlending}));m.rotation.x=-Math.PI/2;m.position.y=y;parent.add(m);return m;}
@@ -107,10 +108,14 @@ void main(){
     mist+=transmittance*alpha*vec3(.34,.36,.39);
     transmittance*=1.-alpha;
   }
+  // Keep the unlit playing surface clear of atmospheric blur and bloom.
+  float boardSurface=step(abs(endpoint.y-.107),.008)*step(max(abs(endpoint.x),abs(endpoint.z)),4.);
+  transmittance=mix(transmittance,1.,boardSurface);
+  mist*=1.-boardSurface;
   float haze=1.-transmittance;
   vec3 sharp=texture2D(source,uv0).rgb;
   vec3 soft=(texture2D(source,uv0+pixel*vec2(3,0)).rgb+texture2D(source,uv0-pixel*vec2(3,0)).rgb+texture2D(source,uv0+pixel*vec2(0,3)).rgb+texture2D(source,uv0-pixel*vec2(0,3)).rgb)*.25;
-  vec3 c=(mix(sharp,soft,haze*.72)+texture2D(bloom,uv0).rgb*.055)*transmittance+mist;
+  vec3 c=(mix(sharp,soft,haze*.72)+texture2D(bloom,uv0).rgb*.055*(1.-boardSurface))*transmittance+mist;
   c*=.96;c=clamp((c*(2.51*c+.03))/(c*(2.43*c+.59)+.14),0.,1.);
   c=mix(c*12.92,1.055*pow(c,vec3(1./2.4))-.055,step(vec3(.0031308),c));
   float v=1.-.15*pow(length((uv0-.5)*1.2),2.);
