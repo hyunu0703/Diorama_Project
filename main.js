@@ -1,6 +1,6 @@
 import * as THREE from './three.module.js';
 import { buildChessPieces } from './chess-models.js';
-import { createGemMaterials } from './celestial-gems.js?v=pastel-crystal-1';
+import { createGemMaterials } from './celestial-gems.js?v=peach-crystal-1';
 import { setupChessInteraction } from './chess-interaction.js';
 import { addRealmBackground } from './realm-background.js?v=6';
 
@@ -14,7 +14,7 @@ document.querySelector('#world').appendChild(renderer.domElement);
 const canvas=renderer.domElement;canvas.setAttribute('aria-label','3D 체스보드. 말을 선택하면 합법적인 이동 칸 표시. 표시된 칸을 클릭해 이동. 드래그 회전, 휠 확대.');canvas.setAttribute('role','img');
 let seed=7452;function random(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}
 const {ivory,ivoryTop,amberBase,obsidian,whiteTrim,blackTrim}=createGemMaterials();
-const whiteGlow=new THREE.MeshBasicMaterial({color:new THREE.Color('#ddccff').multiplyScalar(1.3),toneMapped:false});
+const whiteGlow=new THREE.MeshBasicMaterial({color:new THREE.Color('#ffe3cc').multiplyScalar(1.3),toneMapped:false});
 const blackGlow=new THREE.MeshBasicMaterial({color:new THREE.Color('#168dff').multiplyScalar(2),toneMapped:false});
 // Environment reflection cards supply broad photographic highlights.
 const pmrem=new THREE.PMREMGenerator(renderer),studio=new THREE.Scene();studio.background=new THREE.Color('#010102');
