@@ -111,10 +111,13 @@ void main(){
     vec2 drift=vec2(fogTime*.035,-fogTime*.022);
     float cloud=.42+.4*noise(p.xz*.72+drift)+.18*noise(p.xz*1.8-drift);
     float day=smoothstep(-1.15,1.15,p.z);
-    // Keep only the night atmosphere; the day side has no mist.
-    float density=surround*height*cloud*1.2*(1.-day);
+    // Day mist stays thin over the playing area and disperses beyond the rim.
+    float daySurround=mix(.018,.48,smoothstep(3.5,5.8,edge))
+      *exp(-pow(max(edge-5.,0.)/3.,2.));
+    surround=mix(surround,daySurround,day);
+    float density=surround*height*cloud*mix(1.2,.2,day);
     float alpha=1.-exp(-density*stepLength);
-    mist+=transmittance*alpha*vec3(.0003,.0004,.0007);
+    mist+=transmittance*alpha*mix(vec3(.0003,.0004,.0007),vec3(.34,.36,.39),day);
     transmittance*=1.-alpha;
   }
   float haze=1.-transmittance;
@@ -126,10 +129,11 @@ void main(){
   float v=1.-.15*pow(length((uv0-.5)*1.2),2.);
   gl_FragColor=vec4(c*v,1.);
 }`;
-let azimuth=-.63,elevation=.86,distance=19.4,goalDistance=19.4,drag=null;const lookAt=new THREE.Vector3(0,-.55,0),pointers=new Map();let pinch=null;
+const homeView={azimuth:-.78,elevation:.68,distance:25.8};
+let azimuth=homeView.azimuth,elevation=homeView.elevation,distance=homeView.distance,goalDistance=homeView.distance,drag=null;const lookAt=new THREE.Vector3(0,-.55,0),pointers=new Map();let pinch=null;
 function fit(){return innerWidth/innerHeight<1?1/(innerWidth/innerHeight)**1.05:1;}
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);const s=renderer.getDrawingBufferSize(new THREE.Vector2());target.setSize(s.x,s.y);finalMaterial.uniforms.pixel.value.set(1/s.x,1/s.y);blurA.setSize(Math.max(1,Math.round(s.x/3)),Math.max(1,Math.round(s.y/3)));blurB.setSize(blurA.width,blurA.height);}resize();addEventListener('resize',resize);
-function reset(){azimuth=-.63;elevation=.86;goalDistance=19.4;lookAt.set(0,-.55,0);}document.querySelector('#reset').addEventListener('click',reset);canvas.addEventListener('dblclick',reset);canvas.addEventListener('contextmenu',e=>e.preventDefault());
+function reset(){azimuth=homeView.azimuth;elevation=homeView.elevation;goalDistance=homeView.distance;lookAt.set(0,-.55,0);}document.querySelector('#reset').addEventListener('click',reset);canvas.addEventListener('dblclick',reset);canvas.addEventListener('contextmenu',e=>e.preventDefault());
 canvas.addEventListener('pointerdown',e=>{if(e.button!==0&&e.button!==2)return;canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});drag={id:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,moved:pointers.size>1,pan:e.button===2||e.shiftKey};destinationMarker.visible=false;if(pointers.size===2){const[a,b]=[...pointers.values()];pinch={length:Math.hypot(a.x-b.x,a.y-b.y),distance:goalDistance};}});
 canvas.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId)){hoverAtPointer(e);return;}pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===2&&pinch){const[a,b]=[...pointers.values()];goalDistance=THREE.MathUtils.clamp(pinch.distance*pinch.length/Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),11,30);return;}if(!drag||drag.id!==e.pointerId)return;if(!drag.moved){if(Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)<6)return;drag.moved=true;canvas.classList.add('dragging');}const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(drag.pan){const right=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,0),up=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1),scale=distance*.0008;lookAt.addScaledVector(right,-dx*scale).addScaledVector(up,dy*scale);}else{azimuth-=dx*.005;elevation=THREE.MathUtils.clamp(elevation+dy*.004,.25,1.45);}drag.x=e.clientX;drag.y=e.clientY;});
 function release(e){if(!pointers.has(e.pointerId))return;const clicked=e.type==='pointerup'&&drag&&drag.id===e.pointerId&&!drag.moved&&!drag.pan&&pointers.size===1;pointers.delete(e.pointerId);pinch=null;drag=null;canvas.classList.remove('dragging');if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);if(clicked)placeAtPointer(e);}canvas.addEventListener('pointerleave',()=>{destinationMarker.visible=false;canvas.classList.remove('selectable');});for(const name of['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(name,release);
@@ -137,6 +141,7 @@ canvas.addEventListener('wheel',e=>{e.preventDefault();goalDistance=THREE.MathUt
 addEventListener('keydown',e=>{if(e.target.matches('button,input'))return;if(e.key.toLowerCase()==='r')reset();if(e.key==='ArrowLeft')azimuth-=.08;if(e.key==='ArrowRight')azimuth+=.08;if(e.key==='ArrowUp')elevation=Math.min(1.45,elevation+.06);if(e.key==='ArrowDown')elevation=Math.max(.25,elevation-.06);if(e.key==='+'||e.key==='=')goalDistance=Math.max(11,goalDistance-1);if(e.key==='-')goalDistance=Math.min(30,goalDistance+1);});
 let last=performance.now(),frames=0;renderer.setAnimationLoop(time=>{const dt=Math.min((time-last)/1000,.1);last=time;distance+=(goalDistance-distance)*(1-Math.exp(-10*dt));const r=distance*fit();camera.position.set(Math.sin(azimuth)*Math.cos(elevation)*r,Math.sin(elevation)*r,Math.cos(azimuth)*Math.cos(elevation)*r).add(lookAt);camera.lookAt(lookAt);finalMaterial.uniforms.fogTime.value=time*.001;renderer.setRenderTarget(target);renderer.render(scene,camera);quad.material=blurMaterial;blurMaterial.uniforms.source.value=target.texture;blurMaterial.uniforms.threshold.value=1.4;blurMaterial.uniforms.stepUV.value.set(1.5/blurA.width,0);renderer.setRenderTarget(blurA);renderer.render(post,postCamera);blurMaterial.uniforms.source.value=blurA.texture;blurMaterial.uniforms.threshold.value=0;blurMaterial.uniforms.stepUV.value.set(0,1.5/blurA.height);renderer.setRenderTarget(blurB);renderer.render(post,postCamera);quad.material=finalMaterial;renderer.setRenderTarget(null);renderer.render(post,postCamera);if(++frames>=3&&document.body.dataset.texture==='ready'&&document.body.dataset.reflections==='ready'){document.body.classList.add('ready');document.body.dataset.pieces=pieces.length;}});
 canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();document.querySelector('#status').textContent='3D 화면 연결이 중단되었습니다. 새로고침해 주세요.';document.body.classList.remove('ready');});
+
 
 
 
